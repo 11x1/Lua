@@ -169,6 +169,7 @@ function gui.keybind(tab, text)
   data.type = "keybind"
   data.text = text
   data.key = nil
+  data.default = nil
   data.mode = 1
   data.enabled = true
   data.open = false
@@ -191,6 +192,7 @@ function gui.colorpicker(tab, text, default)
   data.color = default
   data.enabled = true
   data.selected = false
+  data.color = Color.new(1,1,1)
 
   return data
 end
