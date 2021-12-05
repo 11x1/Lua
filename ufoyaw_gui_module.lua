@@ -193,6 +193,29 @@ function gui.colorpicker(tab, text, default)
   data.enabled = true
   data.selected = false
   data.color = Color.new(1,1,1)
+  data.open = false
+
+  data.big_color = Color.new(1, 0, 0)
+  data.selected_color = Color.new(1, 0, 0)
+  data.final_color = Color.new(1, 0, 0)
+  data.x_p_exact = 0
+  data.y_p_exact = 1
+  data.p_final = 1
+
+  data.all_colors = {
+    pos = Vector2.new(0, 0),
+    init = false,
+  }
+
+  data.exact_colors = {
+    pos = Vector2.new(0, 0),
+    init = false,
+  }
+
+  data.final_colors = {
+    pos = Vector2.new(0, 0),
+    init = false,
+  }
 
   return data
 end
