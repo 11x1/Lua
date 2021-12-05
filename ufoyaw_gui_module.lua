@@ -189,7 +189,6 @@ function gui.colorpicker(tab, text, default)
   data.tab = tab
   data.text = text
   data.default = default
-  data.color = default
   data.enabled = true
   data.selected = false
   data.color = Color.new(1,1,1)
