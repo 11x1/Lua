@@ -188,15 +188,16 @@ function gui.colorpicker(tab, text, default)
   data.type = "color"
   data.tab = tab
   data.text = text
-  data.default = default
+  data.default = Color.new(1,1,1) or default
   data.enabled = true
   data.selected = false
   data.color = Color.new(1,1,1)
   data.open = false
 
+  data.size = Vector2.new(100, 80)
   data.big_color = Color.new(1, 0, 0)
-  data.selected_color = Color.new(1, 0, 0)
-  data.final_color = Color.new(1, 0, 0)
+  data.selected_color = Color.new(1, 1, 1)
+  data.final_color = Color.new(1, 1, 1)
   data.x_p_exact = 0
   data.y_p_exact = 1
   data.p_final = 1
@@ -207,7 +208,7 @@ function gui.colorpicker(tab, text, default)
   }
 
   data.exact_colors = {
-    pos = Vector2.new(0, 0),
+    pos = Vector2.new(100, 0),
     init = false,
   }
 
