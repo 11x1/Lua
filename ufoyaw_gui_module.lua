@@ -194,6 +194,7 @@ function gui.colorpicker(tab, text, default)
   data.color = Color.new(1,1,1)
   data.open = false
 
+  data.pos = Vector2.new(0, 0)
   data.size = Vector2.new(100, 80)
   data.big_color = Color.new(1, 0, 0)
   data.selected_color = Color.new(1, 1, 1)
