@@ -23,6 +23,7 @@ end
   default : number/float
   min : number/float
   max : number/float
+  callbacks : table
 ]]
 function gui.slider(tab, text, default, min, max, callbacks)
     local data = {}
@@ -53,6 +54,7 @@ end
   text : string
   options : table
   default : number
+  callbacks : table
 ]]
 function gui.combo(tab, text, options, default, callbacks)
     local data = {}
@@ -79,7 +81,8 @@ end
   tab : string
   text : string
   options : table
-  default : table
+  defaults : table
+  callbacks : table
 ]]
 function gui.multi_combo(tab, text, options, defaults, callbacks)
     local data = {}
@@ -105,6 +108,7 @@ end
   @elem button
   tab : string
   text : string
+  callbacks : table
 ]]
 function gui.button(tab, text, callbacks)
     local data = {}
@@ -123,6 +127,13 @@ function gui.button(tab, text, callbacks)
     return data
 end
 
+--[[
+  @elem switch
+  tab : string
+  text : string
+  default : boolean
+  callbacks : table
+]]
 function gui.switch(tab, text, default, callbacks)
     local data = {}
 
@@ -143,6 +154,13 @@ function gui.switch(tab, text, default, callbacks)
     return data
 end
 
+--[[
+  @elem textbox
+  tab : string
+  text : string
+  default : string
+  callbacks : table
+]]
 function gui.textbox(tab, text, default, callbacks)
   local data = {}
 
@@ -161,6 +179,11 @@ function gui.textbox(tab, text, default, callbacks)
 
   return data
 end
+--[[
+  @elem keybind
+  tab : string
+  text : string
+]]
 
 function gui.keybind(tab, text)
   local data = {}
@@ -183,6 +206,12 @@ function gui.keybind(tab, text)
   return data
 end
 
+--[[
+  @elem text
+  tab : string
+  text : string
+  default : color
+]]
 function gui.colorpicker(tab, text, default)
   local data = {}
 
@@ -222,6 +251,10 @@ function gui.colorpicker(tab, text, default)
   return data
 end
 
+--[[
+  @elem text
+  tab : string
+]]
 function gui.newrow(tab)
   local data = {}
 
