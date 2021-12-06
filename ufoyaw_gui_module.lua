@@ -179,12 +179,12 @@ function gui.textbox(tab, text, default, callbacks)
 
   return data
 end
+
 --[[
   @elem keybind
   tab : string
   text : string
 ]]
-
 function gui.keybind(tab, text)
   local data = {}
 
