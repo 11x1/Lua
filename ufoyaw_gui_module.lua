@@ -169,7 +169,7 @@ function gui.keybind(tab, text)
   data.type = "keybind"
   data.text = text
   data.key = nil
-  data.default = nil
+  data.default = 0
   data.mode = 1
   data.enabled = true
   data.open = false
@@ -178,6 +178,7 @@ function gui.keybind(tab, text)
   data.selected = false
   data.last_press = 0
   data.state = false
+  data.prev_state = false
 
   return data
 end
