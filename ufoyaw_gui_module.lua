@@ -218,7 +218,7 @@ function gui.colorpicker(tab, text, default)
   data.type = "color"
   data.tab = tab
   data.text = text
-  data.default = default or Color.new(1,1,1)
+  data.default = Color.new(1,1,1) or default -- fixing later due to no logic behind hex to rgb when showing colors
   data.enabled = true
   data.selected = false
   data.color = Color.new(1,1,1)
