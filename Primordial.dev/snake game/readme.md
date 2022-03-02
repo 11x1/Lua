@@ -1,3 +1,3 @@
 Snek game by khey/11x1  
 video:  
-[![snake gaem](https://shibe.host/csgo_H7VNv2c3iX.mp4/direct)
+[![snake gaem]https://gcdnb.pbrd.co/images/Tkypt1C2o607.png?o=1](https://youtu.be/JCpMBy_vYB8)
