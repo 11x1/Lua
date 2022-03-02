@@ -1,5 +1,6 @@
 local data = {}
 local font = render.create_font('Small Fonts', 12, 200, e_font_flags.OUTLINE)
+local font_x = render.create_font('Comic Sans MS Bold', 15, 550, e_font_flags.OUTLINE)
 
 local on_miss = function(e)
     for index, value in pairs(data) do
@@ -34,9 +35,8 @@ local on_paint = function()
             if opacity > 1 then
                 local screen_pos = render.world_to_screen(world_pos)
                 if reason and screen_pos then
-                    render.line(screen_pos - vec2_t(3, 3), screen_pos + vec2_t(3, 3), color_t(255, 0, 0, opacity))
-                    render.line(screen_pos - vec2_t(3, -3), screen_pos + vec2_t(3, -3), color_t(255, 0, 0, opacity))
-                    render.text(font, reason .. ' ' .. hitbox, screen_pos + vec2_t(5, -7), color_t(255, 0, 0, opacity))
+                    render.text(font_x, 'x ', screen_pos + vec2_t(0, -render.get_text_size(font_x, 'x ').y/2), color_t(255, 0, 0, opacity))
+                    render.text(font, reason .. ' ' .. hitbox, screen_pos + vec2_t(0 + render.get_text_size(font_x, 'x ').x, -render.get_text_size(font_x, 'x ').y/2 + 1), color_t(255, 0, 0, opacity))
                 end
             end
         end
