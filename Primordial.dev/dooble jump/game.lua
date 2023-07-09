@@ -1,3 +1,5 @@
+
+
 local game = {}
 game.size = vec2_t(200, 400)
 game.pos = vec2_t(render.get_screen_size().x/2 - game.size.x/2, render.get_screen_size().y/2 - game.size.y/2)
@@ -23,8 +25,11 @@ lil_jumper.jump_power = 9
 lil_jumper.image_right = render.load_image('primordial\\scripts\\doodler\\right.png')
 lil_jumper.image_left = render.load_image('primordial\\scripts\\doodler\\left.png')
 lil_jumper.last_side = 0
+lil_jumper.total_distance_crossed = 0
+lil_jumper.last_paddle_height = 0
+lil_jumper.count_jump = true
 
-local accent_color = menu.find('misc', 'main', 'config', 'accent color')[2]
+local accent_color = menu.find('misc', 'main', 'personalization', 'accent color')[2]
 
 game.reset = function()
     game.paddles.table = {}
@@ -56,7 +61,6 @@ for i = 1, 5 do
 end
 
 lil_jumper.pos = vec2_t(game.paddles.table[#game.paddles.table].pos.x, game.size.y -  game.size.y/3)
-
 
 game.handle_paddle_drawing = function()
     for i = 1, #game.paddles.table do
@@ -130,7 +134,6 @@ end
 
 lil_jumper.jump = function()
     lil_jumper.velocity = lil_jumper.velocity - lil_jumper.jump_power
-    game.score = game.score + 1
     engine.play_sound('doodle_jump.wav', 1, 100)
 end
 
@@ -143,12 +146,12 @@ lil_jumper.handle_moving = function()
     if lil_jumper.velocity < -9 then lil_jumper.velocity = -9 end
 
     -- left and right
-    if input.is_key_held(e_keys.KEY_LEFT) then
+    if input.is_key_held(e_keys.KEY_LEFT) or input.is_key_held(e_keys.KEY_A) then
         lil_jumper.pos.x = lil_jumper.pos.x - 2
         lil_jumper.last_side = 0
     end
 
-    if input.is_key_held(e_keys.KEY_RIGHT) then
+    if input.is_key_held(e_keys.KEY_RIGHT) or input.is_key_held(e_keys.KEY_D) then
         lil_jumper.pos.x = lil_jumper.pos.x + 2
         lil_jumper.last_side = 1
     end
@@ -162,7 +165,27 @@ lil_jumper.handle_moving = function()
         if lil_jumper.velocity > 0 and lil_jumper.pos.x + lil_jumper.size.x > paddle.pos.x and lil_jumper.pos.x < paddle.pos.x + paddle.size.x and lil_jumper.pos.y  + lil_jumper.size.y > paddle.pos.y - 5 and lil_jumper.pos.y + lil_jumper.size.y < paddle.pos.y + paddle.size.y then
             lil_jumper.velocity = lil_jumper.velocity/2
             lil_jumper.jump()
+
+            -- okay i found issue!
+            -- its off by -5 to 5 pixels due to my lack of understanding on how to make A GOOD FUCKING TICK SYSTEM AND EVERYTHING RELIES ON FPS
+            -- oh well ¯\_(ツ)_/¯ this'll do
+
+            if lil_jumper.last_paddle_height ~= paddle.pos.y then
+                lil_jumper.last_paddle_height = paddle.pos.y
+                lil_jumper.count_jump = true
+            else
+                lil_jumper.count_jump = false
+            end
         end
+    end
+
+    if lil_jumper.velocity < 0 and lil_jumper.count_jump then
+        -- im pretty sure the position is relative to the screen
+        -- cba to analyse the code i did for the game so im just gonna do this
+        local distance = lil_jumper.last_paddle_height - lil_jumper.pos.y
+        distance = math.floor( distance / render.get_screen_size( ).y * 40 )
+
+        game.score = game.score + distance
     end
 end
 
@@ -187,7 +210,7 @@ local function on_paint()
     lil_jumper.draw()
 
     game.handle_game_state()
-    if game.state == 'paused' or game.state == 'game_over' then return end
+    if game.state == 'paused' or game.state == 'game_over' then return end -- this is so dumb but it makes the menu rendering funnier and i fucking love it
 
     lil_jumper.handle_moving()
     game.handle_paddle_moving()
@@ -203,3 +226,4 @@ local function on_paint()
 end
 
 callbacks.add(e_callbacks.PAINT, on_paint)
+
