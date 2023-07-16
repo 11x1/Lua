@@ -3581,6 +3581,8 @@ function menu.create( )
     gui.page_icon_animation_time = 0.15
     gui.page_icon_animations = false
 
+    gui.custom_logo_function = nil
+
     function gui:set_min_size( new_size )
         self.min_size = new_size
 
@@ -3595,6 +3597,10 @@ function menu.create( )
         self.subtab_size = vec2_t.new( 200, self.size.y )
         self.footer_size = vec2_t.new( self.size.x, 70 )
         self.section_width = ( self.size.x - self.subtab_size.x - 10 - 10 - 10 ) / 2
+    end
+
+    function gui:set_custom_logo( func )
+        self.custom_logo_function = func
     end
 
     function gui:reset_colors( )
@@ -4534,25 +4540,29 @@ function menu.create( )
             self.colors.subtab_background
         )
 
-        -- render logo
-        render.circle_filled(
-            gui.pos + vec2_t.new( 55 + 50, 57 + 50 ),
-            50,
-            self.colors.white
-        )
+        if self.custom_logo_function == nil then
+            -- render logo
+            render.circle_filled(
+                gui.pos + vec2_t.new( 55 + 50, 57 + 50 ),
+                50,
+                self.colors.white
+            )
 
-        local offset = {
-            x = -math.sin( globals.real_time( ) * 2 ) * 10,
-            y = math.sin( globals.real_time( ) ) * 5
-        }
+            local offset = {
+                x = -math.sin( globals.real_time( ) * 2 ) * 10,
+                y = math.sin( globals.real_time( ) ) * 5
+            }
 
-        local second_circle_color = colors.accent
-        second_circle_color.a = 200
-        render.circle_filled(
-            gui.pos + vec2_t.new( 42 + 32 + offset.x, 44 + 32 + offset.y ),
-            32,
-            second_circle_color
-        )
+            local second_circle_color = colors.accent
+            second_circle_color.a = 200
+            render.circle_filled(
+                gui.pos + vec2_t.new( 42 + 32 + offset.x, 44 + 32 + offset.y ),
+                32,
+                second_circle_color
+            )
+        else
+            self.custom_logo_function( gui.pos + vec2_t.new( 0, 20 ), vec2_t.new( self.subtab_size.x, self.subtab_size.x ) )
+        end
 
         -- render black line on the right of the subtab menu
         render.line(
