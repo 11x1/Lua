@@ -1,10 +1,20 @@
-
 local e_keys, input, render, vec2_t, color_t, callbacks, e_callbacks, e_font_flags, menu
 = e_keys, input, render, vec2_t, color_t, callbacks, e_callbacks, e_font_flags, menu
 -- cba to actually set up visual studio code 
 
 local refs = {
     accent = menu.find( 'misc', 'main', 'personalization', 'accent color' )[ 2 ]
+}
+
+local images = {
+    primordial_outline = render.load_image_buffer([[<svg width="3414" height="5915" viewBox="0 0 3414 5915" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M684.299 1722.07C-174.968 549.792 1334.88 3.54513 1334.88 3.54513C1125.91 -13.8695 889.271 59.6302 723.653 126.472C525.728 206.352 348.715 332.953 217.537 501.321C-3.21193 784.656 -22.6679 1082.47 16.4921 1315.11C51.9281 1525.64 146.211 1721.43 280.625 1887.28C598.725 2279.79 1076.75 2695.13 1386.3 2948.27C1007.9 3252.6 395.303 3774.84 188.732 4121.88C188.732 4121.88 -351.377 4944.32 397.412 5588.77C397.412 5588.77 827.044 5901.79 1342.6 5914.06C1342.6 5914.06 -1.53345 5472.15 556.989 4373.52C556.989 4373.52 900.696 3735.21 1654.21 3233.91C1671.95 3222.1 1689.55 3210.1 1707 3197.89C1724.45 3210.1 1742.05 3222.1 1759.79 3233.91C2513.31 3735.21 2857.01 4373.52 2857.01 4373.52C3415.53 5472.15 2071.4 5914.06 2071.4 5914.06C2586.96 5901.79 3016.59 5588.77 3016.59 5588.77C3765.38 4944.32 3225.27 4121.88 3225.27 4121.88C3018.7 3774.84 2406.1 3252.6 2027.7 2948.27C2337.25 2695.13 2815.28 2279.79 3133.37 1887.28C3267.79 1721.43 3362.07 1525.64 3397.51 1315.11C3436.67 1082.47 3417.21 784.656 3196.46 501.321C3065.29 332.953 2888.27 206.352 2690.35 126.472C2524.73 59.6302 2288.09 -13.8695 2079.12 3.54513C2079.12 3.54513 3588.97 549.792 2729.7 1722.07C2729.7 1722.07 2455.56 2154.61 1707 2697.99C958.437 2154.61 684.299 1722.07 684.299 1722.07ZM1707 2697.99C1706.29 2698.51 1705.58 2699.03 1704.87 2699.54C1704.13 2700.08 1703.39 2700.61 1702.65 2701.15C1701.3 2702.13 1699.94 2703.11 1698.59 2704.09C1698.59 2704.09 1570.06 2800.49 1386.3 2948.27C1468.95 3015.86 1539.6 3071.88 1591.98 3112.82C1629.57 3142.2 1667.92 3170.56 1707 3197.89C1746.08 3170.56 1784.43 3142.2 1822.02 3112.82C1874.4 3071.88 1945.05 3015.86 2027.7 2948.27C1843.95 2800.49 1715.42 2704.09 1715.42 2704.09C1712.6 2702.06 1709.8 2700.03 1707 2697.99Z" fill="#D7D7D7"/>
+    <path d="M1707 2697.99L1704.87 2699.54L1702.65 2701.15C1701.3 2702.13 1699.94 2703.11 1698.59 2704.09C1698.59 2704.09 1570.06 2800.49 1386.3 2948.27C1468.95 3015.86 1539.6 3071.88 1591.98 3112.82C1629.57 3142.2 1667.92 3170.56 1707 3197.89C1746.08 3170.56 1784.43 3142.2 1822.02 3112.82C1874.4 3071.88 1945.05 3015.86 2027.7 2948.27C1843.95 2800.49 1715.42 2704.09 1715.42 2704.09C1712.6 2702.06 1709.8 2700.03 1707 2697.99Z" fill="#D7D7D7"/>
+    </svg>]]),
+    primordial_inside = render.load_image_buffer([[<svg width="3414" height="5915" viewBox="0 0 3414 5915" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M839.196 1488.69C831.596 1469.89 836.03 1460.19 839.196 1457.69C845.196 1450.49 874.363 1468.02 888.196 1477.69C1146.7 1613.69 1582.7 1676.69 1777.7 1674.19C1933.7 1672.19 2340.7 1656.36 2524.7 1648.69C2530.3 1649.49 2532.03 1656.36 2532.2 1659.69C2514.7 1766.69 2220.7 2088.69 2151.7 2146.19C2082.7 2203.69 1750.7 2468.69 1748.7 2471.19C1746.7 2473.69 1745.2 2474.69 1738.7 2475.19C1733.5 2475.59 1729.86 2472.69 1728.7 2471.19L1350.2 2146.19C1164.2 2005.69 957.696 1710.69 919.196 1649.69C880.696 1588.69 848.696 1512.19 839.196 1488.69Z" fill="#FFFFFF"/>
+    <path d="M1849 4883.5C1805 4822.3 1785.33 4720 1781 4676.5C1675 4848.5 1568.17 4968.5 1528 5007C1486.83 5053.17 1369.8 5164.8 1231 5242C1057.5 5338.5 912 5335.5 863.5 5337C824.7 5338.2 826.667 5359.5 832.5 5370C991.5 5569 1364 5780.5 1741.5 5767.5C2119 5754.5 2445 5484 2518.5 5394C2592 5304 2568 5288.5 2562 5272.5C2556 5256.5 2484 5212 2335 5164C2186 5116 2126.5 5102 2047 5068.5C1967.5 5035 1904 4960 1849 4883.5Z" fill="#FFFFFF"/>
+    </svg>]])
 }
 
 menu_is_open = menu.is_open
@@ -4541,27 +4551,46 @@ function menu.create( )
         )
 
         if self.custom_logo_function == nil then
-            -- render logo
-            render.circle_filled(
-                gui.pos + vec2_t.new( 55 + 50, 57 + 50 ),
-                50,
-                self.colors.white
-            )
+            local pad = 25
 
-            local offset = {
-                x = -math.sin( globals.real_time( ) * 2 ) * 10,
-                y = math.sin( globals.real_time( ) ) * 5
-            }
+            local pos = self.pos + vec2_t.new( pad, 20 + pad )
+            local size = vec2_t.new( self.subtab_size.x - pad * 2, self.subtab_size.x - 20 - pad * 2 )
 
-            local second_circle_color = colors.accent
-            second_circle_color.a = 200
-            render.circle_filled(
-                gui.pos + vec2_t.new( 42 + 32 + offset.x, 44 + 32 + offset.y ),
-                32,
-                second_circle_color
-            )
+            if images.primordial_outline then
+                local texture_size = images.primordial_outline.size
+
+                local aspect_ratio = texture_size.x / texture_size.y
+
+                local size_x = size.y * aspect_ratio
+                local actual_pos = pos + vec2_t.new( size.x / 2 - size_x / 2, 0 )
+                local actual_size = vec2_t.new( size_x, size.y )
+
+                render.texture(
+                    images.primordial_outline.id,
+                    actual_pos,
+                    actual_size,
+                    colors.white
+                )
+            end
+
+            if images.primordial_inside then
+                local texture_size = images.primordial_inside.size
+
+                local aspect_ratio = texture_size.x / texture_size.y
+
+                local size_x = size.y * aspect_ratio
+                local actual_pos = pos + vec2_t.new( size.x / 2 - size_x / 2, 0 )
+                local actual_size = vec2_t.new( size_x, size.y )
+
+                render.texture(
+                    images.primordial_inside.id,
+                    actual_pos,
+                    actual_size,
+                    colors.accent
+                )
+            end
         else
-            self.custom_logo_function( gui.pos + vec2_t.new( 0, 20 ), vec2_t.new( self.subtab_size.x, self.subtab_size.x ) )
+            self.custom_logo_function( gui.pos + vec2_t.new( 0, 20 ), vec2_t.new( self.subtab_size.x, self.subtab_size.x - 20 ) )
         end
 
         -- render black line on the right of the subtab menu
@@ -4770,7 +4799,7 @@ function menu.create( )
         gui:handle_keybinds( )
         if not menu_is_open( ) then return end
 
-        -- rendering background, subtab sidebar, logo and footer
+        -- rendering background, subtab sidebar, logo
         gui:render_background( )
 
         -- handle and render subtabs
