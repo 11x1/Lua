@@ -4,6 +4,7 @@ Most if not all of my lua scripts for primordial will end up here
 
 **List of public libraries**  
 * Popup menu ([link](https://github.com/11x1/Lua/tree/main/Primordial.dev/popup%20menu))
+* Popup menu ([link](https://github.com/11x1/Lua/tree/main/Primordial.dev/gui%20framework))
 
 **List of public scripts**  
 * mr. rob extension ([link](https://github.com/11x1/Lua/tree/main/Primordial.dev/mr.rob%2C%20a%20supportive%20rectangle%20extension))
