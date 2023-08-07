@@ -1,3 +1,4 @@
+
 local e_keys, input, render, vec2_t, color_t, callbacks, e_callbacks, e_font_flags, menu
 = e_keys, input, render, vec2_t, color_t, callbacks, e_callbacks, e_font_flags, menu
 -- cba to actually set up visual studio code 
@@ -809,6 +810,7 @@ function elements.create_keybind( parent, name, mode, default_key, locked )
                     self.mode == keybind_modes.hold   and 'Hold on: '  or
                     self.mode == keybind_modes.toggle and 'Toggle: '   or
                                                         'Always off'
+
         local gui_y = self.parent.gui.pos.y
 
         local total_text = ( self.mode == keybind_modes.none or self.mode == keybind_modes.always ) and keybind_mode or keybind_mode .. ( self.binding_new_key and '...' or self.key_name )
@@ -902,7 +904,6 @@ function elements.create_keybind( parent, name, mode, default_key, locked )
         return string.format( '[ keybind ][ %s->%s->%s ] %s', self.page, self.tab, self.section, self.name, self.key_name )
     end
 
-    table.insert( parent.gui.keybinds, keybind )
     return keybind
 end
 
@@ -4133,32 +4134,23 @@ function menu.create( )
                     true
                 )
             else
-                local pad = vec2_t.new( 20, 10 )
-
                 local center = pos + vec2_t.new( gui.page_icon_size.x / 2, gui.page_icon_size.y / 2 )
                 local text_pos = center + vec2_t.new( 0, gui.page_icon_size.y / 2 )
-
                 local offset = selected and 14 or 12
-
                 text_pos.y = text_pos.y - offset
-
                 local texture_size = vec2_t.new( 35, 30 )
-
                 local texture_start = vec2_t.new(
                     center.x - texture_size.x / 2,
                     center.y - texture_size.y / 2 - 10
                 )
-
                 if animation_perc > 0 and self.page_icon_animations then
                     local y_raise = 3 * animation_perc
-
                     render.texture(
                         icon.id,
                         texture_start,
                         texture_size,
                         self.colors.black
                     )
-
                     render.text(
                         fonts.page_title,
                         page:sub( 1, 1 ):upper( ) .. page:sub( 2, #page ),
@@ -4166,15 +4158,12 @@ function menu.create( )
                         self.colors.black,
                         true
                     )
-
                     render.texture(
                         icon.id,
                         texture_start - vec2_t.new( 0, y_raise ),
                         texture_size,
                         not selected and self.colors.white100 or self.colors.white
                     )
-
-
                     -- render tab text
                     render.text(
                         fonts.page_title,
@@ -4191,8 +4180,6 @@ function menu.create( )
                         texture_size,
                         not selected and self.colors.white100 or self.colors.white
                     )
-
-
                     -- render tab text
                     render.text(
                         fonts.page_title,
@@ -4550,21 +4537,17 @@ function menu.create( )
             self.colors.subtab_background
         )
 
+        -- render logo
         if self.custom_logo_function == nil then
             local pad = 25
-
             local pos = self.pos + vec2_t.new( pad, 20 + pad )
             local size = vec2_t.new( self.subtab_size.x - pad * 2, self.subtab_size.x - 20 - pad * 2 )
-
             if images.primordial_outline then
                 local texture_size = images.primordial_outline.size
-
                 local aspect_ratio = texture_size.x / texture_size.y
-
                 local size_x = size.y * aspect_ratio
                 local actual_pos = pos + vec2_t.new( size.x / 2 - size_x / 2, 0 )
                 local actual_size = vec2_t.new( size_x, size.y )
-
                 render.texture(
                     images.primordial_outline.id,
                     actual_pos,
@@ -4572,16 +4555,12 @@ function menu.create( )
                     colors.white
                 )
             end
-
             if images.primordial_inside then
                 local texture_size = images.primordial_inside.size
-
                 local aspect_ratio = texture_size.x / texture_size.y
-
                 local size_x = size.y * aspect_ratio
                 local actual_pos = pos + vec2_t.new( size.x / 2 - size_x / 2, 0 )
                 local actual_size = vec2_t.new( size_x, size.y )
-
                 render.texture(
                     images.primordial_inside.id,
                     actual_pos,
