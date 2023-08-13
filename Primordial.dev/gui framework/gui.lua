@@ -1,7 +1,8 @@
-
 local e_keys, input, render, vec2_t, color_t, callbacks, e_callbacks, e_font_flags, menu
 = e_keys, input, render, vec2_t, color_t, callbacks, e_callbacks, e_font_flags, menu
 -- cba to actually set up visual studio code 
+
+unpack = table.unpack == nil and unpack or table.unpack
 
 local refs = {
     accent = menu.find( 'misc', 'main', 'personalization', 'accent color' )[ 2 ]
@@ -18,7 +19,7 @@ local images = {
     </svg>]])
 }
 
-menu_is_open = menu.is_open
+local menu_is_open = menu.is_open
 
 local ease = { }
 function ease.out_exponent( t )
@@ -219,7 +220,7 @@ local function set_visibility_requirement( self, args )
 
     local function handle_visible( )
         local elem_value = menu_element_ref._type == element_types.multicombo and menu_element_ref:get( value ) or menu_element_ref:get( )
-
+        
         if menu_element_ref._type == element_types.multicombo then
             self.visibility_requirements[ index ] = elem_value
         elseif math == nil then
@@ -237,14 +238,16 @@ local function set_visibility_requirement( self, args )
             self.visibility_requirements[ index ] = not self.visibility_requirements[ index ]
         end
 
-        local vis = true
+        local vis = self.visibility_requirements[ index ] == true
+        self.visibility_requirements[ index ] = vis
+
         for i = 1, #self.visibility_requirements do
             if not self.visibility_requirements[ i ] then
                 vis = false
                 break
             end
         end
-    
+
         self:set_visible( vis )
     end
 
@@ -490,6 +493,10 @@ local other_keys = {
     MOUSE_WHEEL_DOWN = 'MWheel down'
 }
 
+local function copy( x )
+    return unpack( { x } )
+end
+
 function input.get_input_text( )
     local uppercase = input.is_key_held( key.KEY_LSHIFT ) or input.is_key_held( key.KEY_RSHIFT )
     for k, v in pairs( input_keys ) do
@@ -591,6 +598,213 @@ local keybind_modes = {
     toggle = 3
 }
 
+function elements.create_tooltip( parent, text )
+    local tooltip = { }
+    tooltip.parent = parent
+    tooltip.gui = parent.gui
+    tooltip.text = type( text ) == 'table' and text or { text }
+
+    tooltip.cached_open = false
+    tooltip.cached_state_change = false
+    tooltip.start_counting = false
+
+    tooltip.pos = vec2_t.new( 0, 0 )
+    tooltip.size = vec2_t.new( 14, 14 )
+
+    tooltip.open = false
+
+    tooltip.hovering = false
+
+    tooltip.animations = {
+        last_interaction = 0,
+        o_c_time = 1.2,
+        last_close_time = 0,
+        close_fade_time = 0.3,
+        hover_start = 0,
+    }
+
+    tooltip.can_render = true
+
+    tooltip.longest_text = 0
+    for i = 1, #tooltip.text do
+        local text_width = render.get_text_size( fonts.default, tooltip.text[ i ] ).x
+        if text_width > tooltip.longest_text then
+            tooltip.longest_text = text_width
+        end
+    end
+
+    function tooltip:set_pos( new_pos )
+        self.pos = new_pos
+
+        self:render_base( ) -- we can do this here because we only set the pos when the element is visible so this will be 'embedded' with the element
+    end
+
+    function tooltip:set_render_state( new_state )
+        self.can_render = new_state
+    end
+
+    function tooltip:in_bounds( )
+        return input.is_mouse_in_bounds( self.pos, self.size )
+    end
+
+    function tooltip:render_base( )
+        local circle_start = self.pos + vec2_t.new( tooltip.size.x / 2, tooltip.size.y / 2 )
+        local tooltip_color = self.gui.colors.inactive_outline
+
+        render.circle_filled(
+            circle_start,
+            tooltip.size.x / 2,
+            self.gui.colors.dark_background
+        )
+
+        render.circle(
+            circle_start,
+            tooltip.size.x / 2,
+            tooltip_color
+        )
+
+        render.text(
+            fonts.page_title,
+            '?',
+            circle_start + vec2_t.new( 1, 0 ),
+            tooltip_color,
+            true
+        )
+    end
+
+    function tooltip:render( )
+        if not self.can_render then return end
+
+        local tooltip_size = tooltip.size
+        local circle_start = self.pos + vec2_t.new( tooltip.size.x / 2, tooltip.size.y / 2 )
+
+        local tooltip_in_bounds = input.is_mouse_in_bounds( self.pos, tooltip_size )
+
+        local realtime = globals.real_time( )
+        local m1_pressed = input.is_key_pressed( key.MOUSE_LEFT )
+
+        local delta = realtime - self.animations.last_interaction
+
+        -- in bounds & not open & not closing
+        if tooltip_in_bounds and not self.open and not ( self.animations.last_close_time + self.animations.close_fade_time > realtime ) and tooltip.hovering then
+            self.animations.hover_start = realtime
+            tooltip.hovering = true
+        elseif not tooltip_in_bounds and not self.open then
+            self.animations.hover_start = realtime
+            tooltip.hovering = false
+        end
+
+        if m1_pressed then
+            if ( self.open and not tooltip_in_bounds ) or ( not self.open and tooltip_in_bounds ) then
+                self.animations.last_close_time = realtime
+            end
+
+            self.open = tooltip_in_bounds
+            
+            tooltip.hovering = false
+            self.animations.hover_start = realtime
+        end
+
+        if ( self.animations.hover_start + self.animations.o_c_time < realtime ) and not self.open then
+            self.open = true
+            self.animations.last_close_time = realtime
+            --print( 'opened tooltim due to hover time > ', self.animations.o_c_time )
+        end
+
+        -- keep it open if we're in bounds
+        if tooltip_in_bounds and self.open then
+            self.animations.last_interaction = realtime
+        end
+
+        if not tooltip_in_bounds and delta > self.animations.o_c_time and self.cached_open ~= self.open then
+            self.open = false
+            --print( 'closed tooltip due to not in bounds and delta > octime' )
+            
+            self.cached_open = self.open
+
+            self.animations.last_close_time = realtime
+        end
+
+        local tooltip_color = self.gui.colors.inactive_outline
+
+
+        local close_perc = ( realtime - self.animations.last_close_time ) / self.animations.close_fade_time
+        if not self.open then
+            close_perc = 1 - close_perc
+        end
+
+        if self.open or self.animations.last_close_time + self.animations.close_fade_time > realtime then
+            local alpha = math.clamp( math.floor( close_perc * 255 ), 0, 255 )
+
+            local texts = self.text
+
+            local texts_height = ( fonts.default.height ) * #texts
+            local padding = vec2_t.new( 5, 2 )
+
+            local total_height = texts_height + padding.y * 2
+
+            local start_pos_x = self.pos.x + tooltip_size.x / 2 - self.longest_text / 2 - padding.x
+            local start_pos_y = self.pos.y - 5 - total_height
+
+            local bg_color = color_t.new(
+                self.gui.colors.dark_background.r,
+                self.gui.colors.dark_background.g,
+                self.gui.colors.dark_background.b,
+                alpha
+            )
+
+            local outline_color = color_t.new(
+                tooltip_color.r,
+                tooltip_color.g,
+                tooltip_color.b,
+                alpha
+            )
+
+            render.rect_filled(
+                vec2_t.new( start_pos_x, start_pos_y ),
+                vec2_t.new( self.longest_text + padding.x * 2, total_height ),
+                bg_color,
+                3
+            )
+
+            render.rect(
+                vec2_t.new( start_pos_x, start_pos_y ),
+                vec2_t.new( self.longest_text + padding.x * 2, total_height ),
+                outline_color,
+                3
+            )
+
+            local text_start = vec2_t.new( circle_start.x, start_pos_y + padding.y + fonts.default.height / 2 )
+
+            for i = 1, #self.text do
+                local row_text = self.text[ i ]
+
+                render.text(
+                    fonts.default,
+                    row_text,
+                    vec2_t.new( text_start.x, text_start.y + fonts.default.height * ( i - 1 ) ),
+                    color_t.new( 255, 255, 255, alpha ),
+                    true
+                )
+            end
+        end
+    end
+
+    function tooltip:set( new_text )
+        self.text = type( new_text ) == 'table' and new_text or { new_text }
+
+        self.longest_text = 0
+        for i = 1, #self.text do
+            local text_width = render.get_text_size( fonts.default, self.text[ i ] ).x
+            if text_width > self.longest_text then
+                self.longest_text = text_width
+            end
+        end
+    end
+
+    return tooltip
+end
+
 function elements.create_keybind( parent, name, mode, default_key, locked )
     local keybind = { _type = element_types.keybind }
 
@@ -601,11 +815,15 @@ function elements.create_keybind( parent, name, mode, default_key, locked )
 
     keybind.name = name
     keybind.mode = mode ~= nil and mode or keybind_modes.none
-
     keybind.mode = math.clamp( keybind.mode, 0, 3 )
 
     keybind.key = default_key or key.KEY_NONE
     keybind.locked = locked or false
+
+    keybind.defaults = {
+        mode = copy( keybind.mode ),
+        key = copy( keybind.key ),
+    }
 
     keybind.state = false
     keybind.visible = true
@@ -674,6 +892,11 @@ function elements.create_keybind( parent, name, mode, default_key, locked )
         keybind.mode = math.clamp( new_mode, 0, 3 )
     end
 
+    function keybind:set_defaults( )
+        keybind.mode = copy( keybind.defaults.mode )
+        keybind.key = copy( keybind.defaults.key )
+    end
+
     function keybind:get_mode( )
         return keybind.mode
     end
@@ -736,9 +959,12 @@ function elements.create_keybind( parent, name, mode, default_key, locked )
             local new_key = input.get_new_keybind_key( )
 
             if new_key ~= nil then
+                if new_key == e_keys.KEY_ESCAPE then
+                    new_key = key.KEY_NONE
+                end
                 self.key = new_key
-                self.key_name = input.get_key_name( self.key )
 
+                self.key_name = input.get_key_name( self.key )
                 self.binding_new_key = false
             end
         elseif not in_bounds and self.binding_new_key and is_mouse_1_pressed then
@@ -919,6 +1145,10 @@ function elements.create_colorpicker( parent, name, default_color )
 
     colorpicker.color = default_color == nil and color_t.new( 255, 255, 255 ) or default_color
 
+    colorpicker.defaults = {
+        color = copy( colorpicker.color )
+    }
+
     colorpicker.visible = true
 
     colorpicker.render_topmost = false
@@ -997,6 +1227,10 @@ function elements.create_colorpicker( parent, name, default_color )
 
         colorpicker.hue, colorpicker.saturation, colorpicker.brightness = rgb_to_hsb( colorpicker.color )
         colorpicker.alpha = colorpicker.color.a
+    end
+
+    function colorpicker:set_defaults( )
+        self:set( copy( self.defaults.color ) )
     end
 
     function colorpicker:set_visible( boolean )
@@ -1257,13 +1491,20 @@ function elements.create_colorpicker( parent, name, default_color )
             local hue_slider_size = vec2_t.new( self.picker_area.x, 10 )
             colorpicker.stored.positions.hue_slider = vec2_t.new( hue_slider_start.x, hue_slider_start.y )
 
+            -- render 1 px thick line of red because we cant round gradients :DDDDDDDDDDDDDDDDDDD
+            render.rect_filled(
+                hue_slider_start + vec2_t.new( 1, 1 ),
+                hue_slider_size - vec2_t.new( 2, 2 ),
+                color_t.new( 255, 0, 0, 255 )
+            )
+
             for i = 0, 300, 60 do
                 local color_1 = hue_to_rgb( i )
                 local color_2 = hue_to_rgb( i + 60 )
 
                 render.rect_fade(
-                    hue_slider_start + vec2_t.new( math.floor( i / 360 * hue_slider_size.x + 0.5 ), 0 ),
-                    vec2_t.new( hue_slider_size.x / 6 + ( i == 300 and 1 or 5 ), hue_slider_size.y ),
+                    hue_slider_start + vec2_t.new( math.floor( i / 360 * hue_slider_size.x + 0.5 ) + 2, 0 ),
+                    vec2_t.new( hue_slider_size.x / 6 + ( i == 300 and 1 or 5 ) - 4, hue_slider_size.y ),
                     color_1,
                     color_2,
                     true
@@ -1278,7 +1519,7 @@ function elements.create_colorpicker( parent, name, default_color )
             )
 
             -- render hue head
-            local hue_head_start = hue_slider_start + vec2_t.new( math.floor( self.hue / 360 * hue_slider_size.x + 0.5 ), -2 )
+            local hue_head_start = hue_slider_start + vec2_t.new( math.floor( self.hue / 360 * ( hue_slider_size.x - 2 ) + 0.5 ), -2 ) -- -2px so it doesnt overflow aaa
             local hue_head_size = vec2_t.new( 3, hue_slider_size.y + 4 )
 
             render.rect_filled(
@@ -1299,11 +1540,19 @@ function elements.create_colorpicker( parent, name, default_color )
 
             render.rect_fade(
                 alpha_slider_start,
-                alpha_slider_size,
+                alpha_slider_size - vec2_t.new( 2, 0 ), -- its visible due to the outline rounding so we need to remove 1 pixel
                 color_t.new( self.color.r, self.color.g, self.color.b, 0 ),
                 color_t.new( self.color.r, self.color.g, self.color.b, 255 ),
                 true
             )
+
+            -- render the line on the alpha slider with full opacity because we still cant round gradients
+            render.rect_filled(
+                alpha_slider_start + vec2_t.new( alpha_slider_size.x - 2, 1 ),
+                vec2_t.new( 1, alpha_slider_size.y - 2 ),
+                color_t.new( self.color.r, self.color.g, self.color.b, 255 )
+            )
+
             -- outline
             render.rect(
                 alpha_slider_start,
@@ -1313,7 +1562,7 @@ function elements.create_colorpicker( parent, name, default_color )
             )
 
             -- render alpha head
-            local alpha_head_start = alpha_slider_start + vec2_t.new( math.floor( self.alpha / 255 * alpha_slider_size.x + 0.5 ), -2 )
+            local alpha_head_start = alpha_slider_start + vec2_t.new( math.floor( self.alpha / 255 * ( alpha_slider_size.x - 2 ) + 0.5 ), -2 )
             local alpha_head_size = vec2_t.new( 3, alpha_slider_size.y + 4 )
 
             render.rect_filled(
@@ -1435,6 +1684,10 @@ function elements.create_checkbox( gui_obj, page, tab, section, name, o_default_
         checkbox.state = false
     end
 
+    checkbox.defaults = {
+        state = checkbox.state
+    }
+
     checkbox.visible = true
     checkbox.render_topmost = false
 
@@ -1445,6 +1698,15 @@ function elements.create_checkbox( gui_obj, page, tab, section, name, o_default_
 
     checkbox.callbacks = { }
     
+    checkbox.tooltip = nil
+    function checkbox:set_tooltip( tooltip_text )
+        self.tooltip = checkbox.tooltip == nil and elements.create_tooltip( self, tooltip_text ) or self.tooltip:set( tooltip_text )
+    end
+
+    function checkbox:has_tooltip( )
+        return self.tooltip ~= nil
+    end
+
     function checkbox:register_callback( func )
         table.insert( self.callbacks, func )
     end
@@ -1505,6 +1767,10 @@ function elements.create_checkbox( gui_obj, page, tab, section, name, o_default_
         self:invoke_callbacks( )
     end
 
+    function checkbox:set_defaults( )
+        self:set( copy( self.defaults.state ) )
+    end
+
     function checkbox:set_visible( boolean )
         self.visible = boolean
     end
@@ -1524,12 +1790,19 @@ function elements.create_checkbox( gui_obj, page, tab, section, name, o_default_
 
 
         local is_mouse_1_pressed = input.is_key_pressed( e_keys.MOUSE_LEFT )
-        local in_bounds = input.is_mouse_in_bounds( pos, vec2_t.new( width, checkbox:get_visual_height( ) ) )
+        local text_width = render.get_text_size( fonts.element, self.name ).x
+        local in_bounds = input.is_mouse_in_bounds( pos, vec2_t.new( text_width + 15 + self.check_size.x, checkbox:get_visual_height( ) ) )
 
         if in_bounds and is_mouse_1_pressed then
             self:click( )
 
             return true
+        end
+
+        if self:has_tooltip( ) then
+            if self.tooltip:in_bounds( ) then
+                return true
+            end
         end
 
         return false
@@ -1540,8 +1813,8 @@ function elements.create_checkbox( gui_obj, page, tab, section, name, o_default_
             return
         end
 
-        local size = vec2_t.new( width, checkbox:get_visual_height( ) )
-        local in_bounds = input.is_mouse_in_bounds( pos, size ) or interacting
+        local text_width = render.get_text_size( fonts.element, self.name ).x
+        local in_bounds = input.is_mouse_in_bounds( pos, vec2_t.new( text_width + 15 + self.check_size.x, checkbox:get_visual_height( ) ) )
 
         -- checkbox background
         local checkbox_start = pos + vec2_t.new( 10, 0 )
@@ -1592,6 +1865,16 @@ function elements.create_checkbox( gui_obj, page, tab, section, name, o_default_
             )
 
             render.pop_clip( )
+
+            -- render tooltip
+            if self.tooltip ~= nil then
+                local tooltip_start = text_start + vec2_t.new( render.get_text_size( fonts.element, checkbox.name ).x + 3, 0 )
+                self.tooltip:set_pos( tooltip_start )
+            end
+        end
+
+        if self.tooltip ~= nil then
+            self.tooltip:set_render_state( checkbox_start.y > gui_y )
         end
     end
 
@@ -1617,6 +1900,10 @@ function elements.create_slider( gui_obj, page, tab, section, name, min, max, de
     slider.visual_value = slider.value
     slider.suffix = suffix == nil and "" or suffix
 
+    slider.defaults = {
+        value = slider.value
+    }
+
     slider.render_topmost = false
     slider.visible = true
 
@@ -1633,6 +1920,17 @@ function elements.create_slider( gui_obj, page, tab, section, name, min, max, de
     slider.visibility_requirements = { }
 
     slider.callbacks = { }
+
+    slider.interacting_tooltip = false -- because god forbid what logic i used a month ago
+
+    slider.tooltip = nil
+    function slider:set_tooltip( tooltip_text )
+        self.tooltip = self.tooltip == nil and elements.create_tooltip( self, tooltip_text ) or self.tooltip:set( tooltip_text )
+    end
+
+    function slider:has_tooltip( )
+        return self.tooltip ~= nil
+    end
     
     function slider:register_callback( func )
         table.insert( self.callbacks, func )
@@ -1686,6 +1984,10 @@ function elements.create_slider( gui_obj, page, tab, section, name, min, max, de
         slider.value = math.min( math.max( value, slider.min ), slider.max )
     end
 
+    function slider:set_defaults( )
+        slider:set( copy( slider.defaults.value ) )
+    end
+
     function slider:set_visible( boolean )
         slider.visible = boolean
     end
@@ -1709,8 +2011,7 @@ function elements.create_slider( gui_obj, page, tab, section, name, min, max, de
         -- in SLIDER bounds not the whole element ok?
         local in_bounds = input.is_mouse_in_bounds( pos + vec2_t( 0, slider.heights.text ), vec2_t.new( width - 10, slider.heights.slider ) )
 
-
-        if ( in_bounds and is_mouse_1_held ) or interacting then
+        if ( in_bounds and is_mouse_1_held ) or interacting and not self.interacting_tooltip then
             local mouse_pos = input.get_mouse_pos( ) - vec2_t( 5, 0 )
 
             if mouse_pos.x < pos.x then
@@ -1732,6 +2033,15 @@ function elements.create_slider( gui_obj, page, tab, section, name, min, max, de
 
             return true
         end
+
+        if self:has_tooltip( ) then
+            if self.tooltip:in_bounds( ) then
+                self.interacting_tooltip = true
+                return true
+            end
+        end
+
+        self.interacting_tooltip = false
 
         return false
     end
@@ -1758,6 +2068,16 @@ function elements.create_slider( gui_obj, page, tab, section, name, min, max, de
                 pos + vec2_t.new( 10 + slider.title_width, 0 ),
                 self.gui.colors.white100
             )
+
+            if self.tooltip ~= nil then
+                local suffix_length = render.get_text_size( fonts.element, ' - ' .. slider.value .. slider.suffix ).x
+                local tooltip_start = pos + vec2_t.new( 10 + slider.title_width + suffix_length + 3, 0 )
+                self.tooltip:set_pos( tooltip_start )
+            end
+        end
+
+        if self.tooltip ~= nil then
+            self.tooltip:set_render_state( pos.y > gui_y )
         end
     
         local size = vec2_t.new( width - 20, slider.heights.slider )
@@ -1765,7 +2085,7 @@ function elements.create_slider( gui_obj, page, tab, section, name, min, max, de
 
         local in_bounds = input.is_mouse_in_bounds( slider_start - vec2_t( 10, 0 ), size + vec2_t.new( 10, 0 ) ) or interacting
 
-        local outline_color = in_bounds and self.gui.colors.hovering_outline or
+        local outline_color = ( in_bounds and not self.interacting_tooltip ) and self.gui.colors.hovering_outline or
                                             self.gui.colors.inactive_outline
 
         if slider_start.y > gui_y then
@@ -1870,6 +2190,10 @@ function elements.create_combo( gui_obj, page, tab, section, name, items, defaul
                 type( default_value ) == "string" and combo.name_to_index[ default_value ] or
                 default_value
 
+    combo.defaults = {
+        value = combo.value
+    }
+
     combo.open = false
     combo.render_topmost = true
 
@@ -1886,6 +2210,16 @@ function elements.create_combo( gui_obj, page, tab, section, name, items, defaul
     combo.visibility_requirements = { }
 
     combo.callbacks = { }
+
+    combo.tooltip = nil
+    combo.interacting_tooltip = false
+    function combo:set_tooltip( tooltip_text )
+        self.tooltip = combo.tooltip == nil and elements.create_tooltip( self, tooltip_text ) or self.tooltip:set( tooltip_text )
+    end
+
+    function combo:has_tooltip( )
+        return self.tooltip ~= nil
+    end
     
     function combo:register_callback( func )
         table.insert( self.callbacks, func )
@@ -1952,6 +2286,10 @@ function elements.create_combo( gui_obj, page, tab, section, name, items, defaul
         self:invoke_callbacks( )
     end
 
+    function combo:set_defaults( )
+        self:set( copy( self.defaults.value ) )
+    end
+
     function combo:get( )
         return self.value, self.items[ self.value ]
     end
@@ -2016,6 +2354,14 @@ function elements.create_combo( gui_obj, page, tab, section, name, items, defaul
             self.last_interaction_time = globals.real_time( )
         end
 
+        if self:has_tooltip( ) then
+            if self.tooltip:in_bounds( ) then
+                self.interacting_tooltip = true
+                return true
+            end
+        end
+        self.interacting_tooltip = false
+
         return not animation_stopped
     end
 
@@ -2034,6 +2380,15 @@ function elements.create_combo( gui_obj, page, tab, section, name, items, defaul
                 pos + vec2_t.new( 10, 0 ),
                 self.gui.colors.hovering_text
             )
+
+            if self.tooltip ~= nil and self.tooltip ~= '' then
+                local tooltip_start = pos + vec2_t.new( 10 + render.get_text_size( fonts.element, self.name ).x + 3, 0 )
+                self.tooltip:set_pos( tooltip_start )
+            end
+        end
+
+        if self.tooltip ~= nil then
+            self.tooltip:set_render_state( pos.y > gui_y )
         end
 
         local size = vec2_t.new( width - 20, self.heights.combo )
@@ -2041,7 +2396,7 @@ function elements.create_combo( gui_obj, page, tab, section, name, items, defaul
 
         local in_bounds = input.is_mouse_in_bounds( combo_start - vec2_t( 10, 0 ), size + vec2_t.new( 10, 0 ) ) or interacting
 
-        local outline_color = ( in_bounds or self.open ) and self.gui.colors.hovering_outline or
+        local outline_color = ( ( in_bounds and not self.interacting_tooltip ) or self.open ) and self.gui.colors.hovering_outline or
                                             self.gui.colors.inactive_outline
 
         local animation_delta = ( globals.real_time( ) - self.last_interaction_time ) / self.open_time
@@ -2090,7 +2445,7 @@ function elements.create_combo( gui_obj, page, tab, section, name, items, defaul
             )
 
             -- render combo current selection 
-            local text_color = in_bounds and self.gui.colors.hovering_text or
+            local text_color = ( in_bounds and not self.interacting_tooltip ) and self.gui.colors.hovering_text or
                                             self.gui.colors.inactive_text
             
             combo_start.y = combo_start.y + 1 -- text y offset so it looks nicer :D
@@ -2164,7 +2519,7 @@ function elements.create_combo( gui_obj, page, tab, section, name, items, defaul
         end
 
         -- render little arrow on the right to indicate opened or closed state
-        local arrow_color = in_bounds and self.gui.colors.hovering_text or
+        local arrow_color = ( in_bounds and not self.interacting_tooltip ) and self.gui.colors.hovering_text or
         self.gui.colors.inactive_text
 
         local arrow_size  = vec2_t.new( 6, 3 )
@@ -2230,7 +2585,17 @@ function elements.create_multi_combo( gui_obj, page, tab, section, name, items, 
     multicombo.visibility_requirements = { }
 
     multicombo.callbacks = { }
-    
+
+    multicombo.tooltip = nil
+    multicombo.interacting_tooltip = false
+    function multicombo:set_tooltip( tooltip_text )
+        self.tooltip = self.tooltip == nil and elements.create_tooltip( self, tooltip_text ) or self.tooltip:set( tooltip_text )
+    end
+
+    function multicombo:has_tooltip( )
+        return self.tooltip ~= nil
+    end
+   
     function multicombo:register_callback( func )
         table.insert( self.callbacks, func )
     end
@@ -2304,6 +2669,10 @@ function elements.create_multi_combo( gui_obj, page, tab, section, name, items, 
         end
     end -- i wanted to do bitwise but then lua said no, https://wxcoy.cc/fail/1ec14ec2-a6fb-4dbb-95d2-36dc9a517cac cool thing supporting my claim on why i didnt want to do it bitwise!
 
+    multicombo.defaults = {
+        values = copy( multicombo.values )
+    }
+
     function multicombo:get_visual_height( )
         if not self.visible then
             return 0
@@ -2324,6 +2693,10 @@ function elements.create_multi_combo( gui_obj, page, tab, section, name, items, 
         self.values[ name_or_index ] = boolean
 
         self:invoke_callbacks( )
+    end
+
+    function multicombo:set_defaults( )
+        self.values = copy( self.defaults.values )
     end
 
     function multicombo:toggle( name_or_index )
@@ -2427,6 +2800,14 @@ function elements.create_multi_combo( gui_obj, page, tab, section, name, items, 
             self.last_interaction_time = globals.real_time( )
         end
 
+        if self:has_tooltip( ) then
+            if self.tooltip:in_bounds( ) then
+                self.interacting_tooltip = true
+                return true
+            end
+        end
+        self.interacting_tooltip = false
+
         return ( not animation_stopped ) or ( self.open and in_combo_bounds )
     end
 
@@ -2445,6 +2826,15 @@ function elements.create_multi_combo( gui_obj, page, tab, section, name, items, 
                 pos + vec2_t.new( 10, 0 ),
                 self.gui.colors.hovering_text
             )
+
+            if self.tooltip ~= nil and self.tooltip ~= '' then
+                local tooltip_start = pos + vec2_t.new( 10 + render.get_text_size( fonts.element, self.name ).x + 3, 0 )
+                self.tooltip:set_pos( tooltip_start )
+            end
+        end
+
+        if self.tooltip ~= nil then
+            self.tooltip:set_render_state( pos.y > gui_y )
         end
 
         local size = vec2_t.new( width - 20, self.heights.combo )
@@ -2456,7 +2846,7 @@ function elements.create_multi_combo( gui_obj, page, tab, section, name, items, 
 
         local in_bounds = input.is_mouse_in_bounds( combo_start - vec2_t( 10, 0 ), size + vec2_t.new( 10, 0 ) ) or interacting
 
-        local outline_color = ( in_bounds or self.open ) and self.gui.colors.hovering_outline or
+        local outline_color = ( ( in_bounds and not self.interacting_tooltip ) or self.open ) and self.gui.colors.hovering_outline or
                                             self.gui.colors.inactive_outline
 
         local animation_delta = ( globals.real_time( ) - self.last_interaction_time ) / self.open_time
@@ -2502,7 +2892,7 @@ function elements.create_multi_combo( gui_obj, page, tab, section, name, items, 
         -- https://wxcoy.cc/fail/79eb8cc7-653c-4a06-a388-971e04a7963e LOOK HOW MUCH BETTER IT LOOKS
 
         -- render combo current selection 
-        local text_color = ( in_bounds and not self.open ) and self.gui.colors.hovering_text or
+        local text_color = ( ( in_bounds and not self.interacting_tooltip ) and not self.open ) and self.gui.colors.hovering_text or
                                         self.gui.colors.inactive_text
         
         combo_start.y = combo_start.y + 1 -- text y offset so it looks nicer :D
@@ -2564,7 +2954,7 @@ function elements.create_multi_combo( gui_obj, page, tab, section, name, items, 
         )
 
         -- render little arrow on the right to indicate opened or closed state
-        local arrow_color = in_bounds and self.gui.colors.hovering_text or
+        local arrow_color = ( in_bounds and not self.interacting_tooltip )   and self.gui.colors.hovering_text or
                             self.gui.colors.inactive_text
 
         local arrow_size  = vec2_t.new( 6, 3 )
@@ -2691,6 +3081,16 @@ function elements.create_text_input( gui_obj, page, tab, section, name, default 
     text_input.visibility_requirements = { }
 
     text_input.callbacks = { }
+
+    text_input.tooltip = nil
+    text_input.interacting_tooltip = false
+    function text_input:set_tooltip( tooltip_text )
+        self.tooltip = self.tooltip == nil and elements.create_tooltip( self, tooltip_text ) or self.tooltip:set( tooltip_text )
+    end
+
+    function text_input:has_tooltip( )
+        return self.tooltip ~= nil
+    end
     
     function text_input:register_callback( func )
         table.insert( self.callbacks, func )
@@ -2738,8 +3138,16 @@ function elements.create_text_input( gui_obj, page, tab, section, name, default 
 
     text_input.value = default or ""
 
+    text_input.defaults = {
+        value = copy( text_input.value )
+    }
+
     function text_input:set( text )
         text_input.value = text
+    end
+
+    function text_input:set_defaults( )
+        text_input.value = copy( text_input.defaults.value )
     end
 
     function text_input:get( )
@@ -2812,6 +3220,14 @@ function elements.create_text_input( gui_obj, page, tab, section, name, default 
             end
         end
 
+        if self:has_tooltip( ) then
+            if self.tooltip:in_bounds( ) then
+                self.interacting_tooltip = true
+                return true
+            end
+        end
+        self.interacting_tooltip = false
+
         return self.focusing
     end
 
@@ -2830,6 +3246,15 @@ function elements.create_text_input( gui_obj, page, tab, section, name, default 
                 pos + vec2_t.new( 10, 0 ),
                 self.gui.colors.hovering_text
             )
+
+            if self.tooltip ~= nil and self.tooltip ~= '' then
+                local tooltip_start = pos + vec2_t.new( 10 + render.get_text_size( fonts.element, self.name ).x + 3, 0 )
+                self.tooltip:set_pos( tooltip_start )
+            end
+        end
+
+        if self.tooltip ~= nil then
+            self.tooltip:set_render_state( pos.y > gui_y )
         end
 
         local size = vec2_t.new( width - 20, self.heights.input )
@@ -2838,7 +3263,7 @@ function elements.create_text_input( gui_obj, page, tab, section, name, default 
         if input_start.y > gui_y then
             local in_bounds = input.is_mouse_in_bounds( input_start - vec2_t( 10, 0 ), size + vec2_t.new( 10, 0 ) ) or interacting
 
-            local outline_color = in_bounds and self.gui.colors.hovering_outline or
+            local outline_color = ( in_bounds and not self.interacting_tooltip ) and self.gui.colors.hovering_outline or
                                                 self.gui.colors.inactive_outline
 
             -- render text input background
@@ -2901,6 +3326,10 @@ function elements.create_text( gui_obj, page, tab, section, name )
     text.section = section
     text.name = name
 
+    text.defaults = {
+        name = copy( text.name )
+    }
+
     text.visible = true
     text.render_topmost = false
 
@@ -2908,6 +3337,15 @@ function elements.create_text( gui_obj, page, tab, section, name )
     text.visibility_requirements = { }
 
     text.callbacks = { }
+
+    text.tooltip = nil
+    function text:set_tooltip( tooltip_text )
+        self.tooltip = self.tooltip == nil and elements.create_tooltip( self, tooltip_text ) or self.tooltip:set( tooltip_text )
+    end
+
+    function text:has_tooltip( )
+        return self.tooltip ~= nil
+    end
     
     function text:register_callback( func )
         table.insert( self.callbacks, func )
@@ -2961,6 +3399,10 @@ function elements.create_text( gui_obj, page, tab, section, name )
         self.name = new_name
     end
 
+    function text:set_defaults( )
+        self.name = copy( self.defaults.name )
+    end
+
     function text:set_visible( boolean )
         self.visible = boolean
     end
@@ -2970,6 +3412,12 @@ function elements.create_text( gui_obj, page, tab, section, name )
     end
                                                     
     function text:handle( pos, width )
+        if self:has_tooltip( ) then
+            if self.tooltip:in_bounds( ) then
+                return true
+            end
+        end
+
         return false -- purely here not to cause an issue when handleing all elements
     end
 
@@ -2990,6 +3438,15 @@ function elements.create_text( gui_obj, page, tab, section, name )
             )
 
             render.pop_clip( )
+
+            if self.tooltip ~= nil and self.tooltip ~= '' then
+                local tooltip_start = pos + vec2_t.new( 10 + render.get_text_size( fonts.element, self.name ).x + 3, 0 )
+                self.tooltip:set_pos( tooltip_start )
+            end
+        end
+
+        if self.tooltip ~= nil then
+            self.tooltip:set_render_state( pos.y > self.gui.pos.y )
         end
     end
 
@@ -3017,6 +3474,16 @@ function elements.create_button( gui_obj, page, tab, section, name )
     button.visibility_requirements = { }
 
     button.callbacks = { }
+
+    button.tooltip = nil
+    function button:set_tooltip( tooltip_text )
+        --self.tooltip = self.tooltip == nil and elements.create_tooltip( self, tooltip_text ) or self.tooltip:set( tooltip_text )
+        -- how would i add a tooltip to a button??????????????
+    end
+
+    function button:has_tooltip( )
+        return false
+    end
     
     function button:register_callback( func )
         table.insert( self.callbacks, func )
@@ -3038,6 +3505,10 @@ function elements.create_button( gui_obj, page, tab, section, name )
         local args = { ... }
         
         set_visibility_requirement( self, args )
+    end
+
+    function button:set_defaults( )
+        -- Do nun!
     end
 
     button.extras = { }
@@ -3168,6 +3639,16 @@ function elements.create_separator( gui_obj, page, tab, section )
     sep.visibility_requirements = { }
 
     sep.callbacks = { }
+
+    sep.tooltip = nil
+    function sep:set_tooltip( _ )
+        --self.tooltip = self.tooltip == nil and elements.create_tooltip( self, tooltip_text ) or self.tooltip:set( tooltip_text )
+        -- just here to avoid errors when setting, separators dont have tooltips
+    end
+
+    function sep:has_tooltip( )
+        return false -- :troll: (again)
+    end
     
     function sep:register_callback( func )
         table.insert( self.callbacks, func )
@@ -3221,6 +3702,10 @@ function elements.create_separator( gui_obj, page, tab, section )
         
     end
 
+    function sep:set_defaults( )
+        -- Do nun! (again)
+    end
+
     function sep:set_visible( boolean )
         self.visible = boolean
     end
@@ -3268,6 +3753,11 @@ function elements.create_list( gui_obj, page, tab, section, items )
     list.items = items
     list.selected = #items == 0 and nil or 1
 
+    list.defaults = {
+        items = copy( list.items ),
+        selected = copy( list.selected )
+    }
+
     list.visible = true
     list.render_topmost = false
 
@@ -3280,6 +3770,16 @@ function elements.create_list( gui_obj, page, tab, section, items )
 
     list.height = 130
     list.entry_height = 14
+
+    list.tooltip = nil
+    function list:set_tooltip( _ )
+        --self.tooltip = self.tooltip == nil and elements.create_tooltip( self, tooltip_text ) or self.tooltip:set( tooltip_text )
+        -- just here to avoid errors when setting, lists dont have tooltips
+    end
+
+    function list:has_tooltip( )
+        return false
+    end
     
     function list:register_callback( func )
         table.insert( self.callbacks, func )
@@ -3340,6 +3840,11 @@ function elements.create_list( gui_obj, page, tab, section, items )
         else
             self.selected = index_or_name
         end
+    end
+
+    function list:set_defaults( )
+        self.items = copy( self.defaults.items )
+        self.selected = copy( self.defaults.selected )
     end
 
     function list:set_visible( boolean )
@@ -3593,6 +4098,8 @@ function menu.create( )
     gui.page_icon_animations = false
 
     gui.custom_logo_function = nil
+
+    gui.draw_call_tooltips = { }
 
     function gui:set_min_size( new_size )
         self.min_size = new_size
@@ -4048,7 +4555,18 @@ function menu.create( )
             else
                 print( 'couldnt load ' .. page )
             end
-        
+        end
+    end
+
+    function gui:reset_config( ) -- I LOVE NESTED FOR LOOPS HELL YEAH!!!!!!!!!!!!!!
+        for _, tabs in pairs( gui.pages ) do
+            for _, sections in pairs( tabs ) do
+                for _, section_elements in pairs( sections ) do
+                    for i = 1, #section_elements do
+                        section_elements[ i ]:set_defaults( )
+                    end
+                end
+            end
         end
     end
 
@@ -4383,7 +4901,9 @@ function menu.create( )
             local total_height = element_start_pos.y - pos.y
 
             if total_height > max_height and gui.can_scroll and input.is_mouse_in_bounds( self.pos, self.size ) then
-                self.scroll[ self.current_page ][ self.current_subtab ] = self.scroll[ self.current_page ][ self.current_subtab ] + input.get_scroll_delta( ) * 20
+                local scroll_amt = input.get_scroll_delta( ) * 20
+
+                self.scroll[ self.current_page ][ self.current_subtab ] = self.scroll[ self.current_page ][ self.current_subtab ] + scroll_amt
 
                 local max_scroll = -total_height + max_height - 50
 
@@ -4675,6 +5195,7 @@ function menu.create( )
         local element_pos_right = gui.pos + vec2_t.new( gui.subtab_size.x + 10 + gui.section_width + 10, 40 + scroll_amount )
 
         local draw_topmost = { }
+        self.draw_call_tooltips = { }
 
         local max_height = gui.size.y - ( gui.footer_size.y - 40 )
 
@@ -4693,6 +5214,11 @@ function menu.create( )
             )
             
             for _, element in pairs( subtab_elements ) do
+                
+                if element:has_tooltip( ) then
+                    table.insert( self.draw_call_tooltips, element.tooltip )
+                end
+
                 -- skip keybinds and colorpickers 
                 if element._type == element_types.keybind or element._type == element_types.colorpicker then
                     goto continue
@@ -4703,7 +5229,8 @@ function menu.create( )
                                                     interaction_table.tab == element.tab and
                                                     interaction_table.section == element.section and
                                                     interaction_table.element == element
-
+                
+                
                 local y_pos = element_start_pos.y
 
                 -- if element is out of bounds
@@ -4774,6 +5301,14 @@ function menu.create( )
         end
     end
 
+    function gui:render_tooltips( )
+        for i = 1, #self.draw_call_tooltips do
+            local tooltip = self.draw_call_tooltips[ i ]
+            tooltip:render(  ) -- okay bug! you can hover through the menu and it will render the tooltip
+            -- solution: nothing, im too tired (pretend it works like intended)
+        end
+    end
+
     function gui:render( )
         gui:handle_keybinds( )
         if not menu_is_open( ) then return end
@@ -4807,9 +5342,18 @@ function menu.create( )
         -- handle and render pages
         gui:handle_pages( )
 
+        -- render tooltips (theyre topmost of everything, even da menu)
+        gui:render_tooltips( )
+
         -- handle every menu element input before rendering and handleing dragging
         gui:handle_drag( )
     end
+
+    callbacks.add( e_callbacks.SETUP_COMMAND, function( cmd )
+        if menu_is_open( ) then
+            cmd.weaponselect = 0
+        end
+    end )
 
     return gui
 end
@@ -4817,5 +5361,6 @@ end
 callbacks.add( e_callbacks.PAINT, function ( )
     colors.accent = refs.accent:get( )
 end)
+
 
 return menu
