@@ -3295,7 +3295,7 @@ function elements.create_text_input( gui_obj, page, tab, section, name, default 
             end
 
             -- render text input text
-            local text_color = ( in_bounds or self.focusing ) and self.gui.colors.hovering_text or
+            local text_color = ( ( in_bounds and not self.interacting_tooltip ) or self.focusing ) and self.gui.colors.hovering_text or
                                             self.gui.colors.inactive_text
 
             render.text(
