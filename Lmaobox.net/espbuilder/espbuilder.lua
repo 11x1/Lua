@@ -571,7 +571,8 @@ callbacks.Register( "CreateMove", "mycreate", function( cmd )
     if not myEnt then 
         myEnt = entities.CreateEntityByName( "grenade" )
         myEnt:SetModel( "models/player/demo.mdl" )
-        myEnt:SetAbsOrigin( Vector3( 50, 50, -100 ) )
+        myEnt:SetAbsOrigin( Vector3( 50, 50, 500 ) )
+        myEnt:SetPropInt( 42, 'm_iTeamNum' )
     end
 end )
 
@@ -816,9 +817,14 @@ function options.new_checkbox( name, default_value )
     checkbox.size = vector( option_pad + checkbox.check_size.x + checkbox.padding_between_check_and_text + checkbox.text_size.x + option_pad, option_height )
 
     checkbox.hovered = false
+    checkbox.visible = true
 
     function checkbox:get( )
         return self.state
+    end
+
+    function checkbox:set_visible( new_vis_state )
+        self.visible = new_vis_state
     end
 
     function checkbox:get_width( )
@@ -894,9 +900,11 @@ function options.new_combo( name, ... )
     combo.name = name
     combo.items = { ... }
     combo.selected = 1
+    combo.last_selected = 0
     combo.hovered_item = nil
 
     combo.open = false
+    combo.visible = true
 
     local longest_item = 0
     for i = 1, #combo.items do
@@ -924,6 +932,10 @@ function options.new_combo( name, ... )
         return self.selected, self.items[ self.selected ]
     end
 
+    function combo:set_visible( new_vis_state )
+        self.visible = new_vis_state
+    end
+
     function combo:get_width( )
         return self.size.x
     end
@@ -933,7 +945,13 @@ function options.new_combo( name, ... )
     end
 
     function combo:does_prevent_closing( )
-        return combo.open and combo.hovered_item ~= nil
+        local just_changed = false
+        if self.last_selected ~= self.selected and not self.open then
+            self.last_selected = self.selected
+            just_changed = true
+        end
+
+        return ( combo.open and combo.hovered_item ~= nil ) or just_changed
     end
 
     function combo:close( )
@@ -955,7 +973,7 @@ function options.new_combo( name, ... )
 
         self.hovered = in_bounds or self.open
 
-        if in_bounds and m1_pressed and not allow_passthrough_id or allow_passthrough_id == self.id then
+        if in_bounds and m1_pressed and ( not allow_passthrough_id or allow_passthrough_id == self.id ) then
             self.open = not self.open
         end
 
@@ -965,7 +983,7 @@ function options.new_combo( name, ... )
 
         if not in_bounds and m1_pressed and not in_items_bounds then
             self.open = false
-            return true
+            return false
         end
 
         if self.open then
@@ -988,7 +1006,7 @@ function options.new_combo( name, ... )
                 self.hovered_item = nil
             end
 
-            if m1_pressed and idx_in_bounds  then
+            if m1_pressed and idx_in_bounds then
                 self.selected = idx_hovered
                 self.open = false
                 return true
@@ -1111,6 +1129,8 @@ function options.new_colorpicker( name, default_color )
     colorpicker.size = vector( 0, option_pad + colorpicker.name_size.y + option_pad )
     colorpicker.head_size = vector( option_height - option_pad )
 
+    colorpicker.visible = true
+
     colorpicker.hovered = false
 
     colorpicker.picker = {
@@ -1144,6 +1164,10 @@ function options.new_colorpicker( name, default_color )
 
     function colorpicker:get( )
         return self.color
+    end
+
+    function colorpicker:set_visible( new_vis_state )
+        self.visible = new_vis_state
     end
 
     function colorpicker:get_width( )
@@ -1194,6 +1218,16 @@ function options.new_colorpicker( name, default_color )
             local opacity_size = self.picker.opacity
             local in_opacity_bounds = is_in_bounds( opacity_start, opacity_size )
 
+            if not self.in_colorpicker and is_m1_pressed and not self.hovered then
+                self.open = false
+                self.changing.big = false
+                self.changing.hue = false
+                self.changing.opacity = false
+
+                if allow_passthrough_id == self.id then
+                    allow_passthrough_id = nil
+                end
+            end
 
             if is_m1_down and ( not allow_passthrough_id or allow_passthrough_id == self.id ) then
                 if in_big_bounds and not self.changing.hue and not self.changing.opacity then
@@ -1453,6 +1487,10 @@ function options_menu.new( given_options )
 
     menu.size = vector( menu.width, menu.height )
 
+    function menu:get_option( opt_name )
+        return self.options_dict[ opt_name ]
+    end
+
     function menu:toggle_visibility( new_state )
         if new_state == nil then
             self.open = not self.open
@@ -1488,7 +1526,7 @@ function options_menu.new( given_options )
         -- render bg
         renderer.rect_filled(
             render_start,
-            vector( self.width, self.height ),
+            self.size,
             color( 20 )
         )
         local opt_pos = render_start + vector( 0, option_pad )
@@ -1497,9 +1535,14 @@ function options_menu.new( given_options )
 
         allow_passthrough_id = nil
 
+
+        local new_y_size = option_pad * 2
+
         skip_handle = false
         for i = 1, #self.options do
             local option = self.options[ i ]
+
+            if not option.visible then goto next_opt end
 
             if not option.topmost then
                 option:render( opt_pos, self.width )
@@ -1512,8 +1555,15 @@ function options_menu.new( given_options )
                 end
             end
 
-            opt_pos.y = opt_pos.y + option:get_height( )
+            local opt_height = option:get_height( )
+
+            new_y_size = new_y_size + opt_height
+            opt_pos.y = opt_pos.y + opt_height
+
+            ::next_opt::
         end
+
+        self.size.y = new_y_size
 
         for i = #render_after, 1, -1 do
             local data = render_after[ i ]
@@ -1735,18 +1785,15 @@ function docker.text( text, given_options, callback )
         local pos = params.pos
         local width = params.width
         local area = params.area
-
-        renderer.use_font( esp.font )
-        local sz = renderer.measure_text( self.value_str )
+        local text_sz = params.text_size
 
         if area.flow == docker_area_flow[ 'horizontal' ] then
             local center = pos + vector( math.floor( width / 2 ), 0 )
-            local text_sz = renderer.measure_text( self.value_str )
 
             pos.x = center.x - math.floor( text_sz.x / 2 )
         end
 
-        local in_bounds = is_in_bounds( pos, sz )
+        local in_bounds = is_in_bounds( pos, text_sz )
         local mouse_held = input.is_key_down( MOUSE_LEFT )
         local mouse = input.get_mouse_pos( )
         local x, y = table.unpack( mouse )
@@ -2330,7 +2377,10 @@ function docker_area.new( pos, size, left_align_or_align_top, force_align, disal
             }
 
             slider:handle_area_drag( slider_props )
-            slider:render( slider_props )
+
+            if slider.parent.id == self.id then
+                slider:render( slider_props )
+            end
 
             if self.flow == docker_area_flow[ 'vertical' ] and not self.inverted then
                 slider_start = slider_start - vector( slider_pad, 0 )
@@ -2387,10 +2437,10 @@ function docker_area.new( pos, size, left_align_or_align_top, force_align, disal
 
             text.value_str = tostring( preview_text )
 
+            local text_pos = text_start
             renderer.use_font( esp.font )
             local text_sz = renderer.measure_text( text.value_str )
 
-            local text_pos = text_start
             if self.flow == docker_area_flow[ 'vertical' ] and not self.inverted then
                 text_pos = text_start - vector( text_sz.x, 0 )
             elseif self.flow == docker_area_flow[ 'horizontal' ] and not self.inverted then
@@ -2400,11 +2450,15 @@ function docker_area.new( pos, size, left_align_or_align_top, force_align, disal
             local text_props = {
                 pos = text_pos,
                 width = self.size.x,
-                area = self
+                area = self,
+                text_size = text_sz
             }
 
             text:handle_area_drag( text_props )
-            text:render( text_props )
+
+            if text.parent.id == self.id then -- 3 hours of debugging just to write this if statement, CHIPI CHIPI CHAPA CHAPA LUDI LUDI LABA LABA MAGICO MI LUBI LUBI BOOM BOOM BOOM BOOM
+                text:render( text_props )
+            end
 
             if text.options_menu then
                 text_props.text_sz = text_sz
@@ -2424,8 +2478,6 @@ function docker_area.new( pos, size, left_align_or_align_top, force_align, disal
                         open_menu_pos = nil
                     end
                 end
-
-
             end
 
             if self.flow == docker_area_flow[ 'vertical' ] then
@@ -2598,6 +2650,168 @@ local new_right_area = docker_area.new(
     vector( 40, 100 ),
     true
 )
+
+local custom_mats = { }
+
+local function create_custom_mat( name, kv )
+    custom_mats[ name ] = materials.Create( name, kv )
+end
+
+create_custom_mat( 'metallic', [[
+"VertexLitGeneric"
+{
+    "$additive"                 "0"
+    "$ignorez"					"0"
+    "$envmap"					"env_cubemap"
+    "$envmaptint"				"[1 0 0]"
+    "$envmapfresnel"			"1"
+    "$envmapfresnelminmaxexp"	"[0 1 2]"
+}
+]] )
+
+create_custom_mat( 'glow', [[
+"VertexLitGeneric"
+{
+    "$basetexture"  "vgui/white_additive"
+    "$additive"                 "1"
+    "$ignorez"					"0"
+    "$envmap"					"env_cubemap"
+    "$envmaptint"				"[0 0 0]"
+    "$envmapfresnel"			"1"
+    "$envmapfresnelminmaxexp"	"[0 1 2]"
+}]] )
+
+create_custom_mat( 'flat', [[
+"UnlitGeneric" {
+    "$basetexture"  "vgui/white_additive"
+    "$ignorez"      "0"
+    "$model"		"1"
+    "$flat"			"1"
+    "$nocull"		"1"
+    "$selfillum"	"1"
+    "$halflambert"	"1"
+    "$wireframe"	"0"
+}
+]] )
+
+local materials_key_to_mat = { }
+
+for k, v in pairs( custom_mats ) do
+    materials_key_to_mat[ k ] = v
+end
+
+local materials_list = { }
+for k, _ in pairs( materials_key_to_mat ) do
+    table.insert( materials_list, k )
+end
+
+local selected_mat_data = {
+    material = nil,
+    color_override = color( 255 ),
+    backtrack_mod = false,
+    backtrack_start = nil,
+    backtrack_end = nil
+}
+
+local model_options_menu = options_menu.new({ 
+    options.new_checkbox( 'override material', false ),
+    options.new_checkbox( 'wireframe', false ),
+    options.new_combo( 'chams', table.unpack( materials_list ) ),
+    options.new_colorpicker( 'chams color', color( '00436e' ) ),
+    options.new_checkbox( 'backtrack modulation', false ),
+    options.new_colorpicker( 'backtrack start', color( '00436e' ) ),
+    options.new_colorpicker( 'backtrack end', color( '6d1537' ) ),
+})
+
+local function model_options_callback( )
+    local self = model_options_menu
+    local override_mat_opt = self:get_option( 'override material' )
+
+    local wireframe_opt = self:get_option( 'wireframe' )
+    local material_opt = self:get_option( 'chams' )
+    local chams_color_opt = self:get_option( 'chams color' )
+    
+    local backtrack_mod_opt = self:get_option( 'backtrack modulation' )
+    local backtrack_start_opt = self:get_option( 'backtrack start' )
+    local backtrack_end_opt = self:get_option( 'backtrack end' )
+
+    local should_override_mat = override_mat_opt:get( )
+    local override_backtrack = backtrack_mod_opt:get( )
+
+    wireframe_opt:set_visible( should_override_mat )
+    material_opt:set_visible( should_override_mat )
+    chams_color_opt:set_visible( should_override_mat )
+    backtrack_mod_opt:set_visible( should_override_mat )
+
+    backtrack_start_opt:set_visible( should_override_mat and override_backtrack )
+    backtrack_end_opt:set_visible( should_override_mat and override_backtrack )
+
+    if should_override_mat then
+        local _, name = material_opt:get( )
+        selected_mat_data.material = name
+        selected_mat_data.color_override = chams_color_opt:get( )
+        selected_mat_data.wireframe = wireframe_opt:get( )
+
+        if override_backtrack then
+            selected_mat_data.backtrack_mod = true
+            selected_mat_data.backtrack_start = backtrack_start_opt:get( )
+            selected_mat_data.backtrack_end = backtrack_end_opt:get( )
+        end
+    else
+        selected_mat_data.material = nil
+    end
+
+    if not override_backtrack then
+        selected_mat_data.backtrack_mod = false
+    end
+end
+
+local function handle_model_menu( )
+    local start_pos = new_top_area.pos + vector( option_pad, option_pad + new_top_area.size.y )
+    local size = vector( new_top_area.size.x, new_left_area.size.y ) - vector( option_pad ) * 2
+
+    local in_bounds = is_in_bounds( start_pos, size )
+    local is_m2_pressed = input.is_button_pressed( MOUSE_RIGHT )
+
+    local mouse = input.get_mouse_pos( )
+    local x, y = table.unpack( mouse )
+    local mouse_pos = vector( x, y )
+
+    if in_bounds and not dragging_id and not is_changing_view then
+        renderer.rect_filled(
+            start_pos,
+            size,
+            color( 100, 100, 100, 10 )
+        )
+    end
+
+    if in_bounds and is_m2_pressed then
+        model_options_menu:toggle_visibility( )
+
+        if model_options_menu.open then
+            open_menu = model_options_menu
+            open_menu_pos = mouse_pos + vector( math.floor( -model_options_menu.size.x / 2 ), option_pad )
+        else
+            open_menu = nil
+            open_menu_pos = nil
+        end
+    end
+
+    if model_options_menu.open then
+        local in_menu_bounds = is_in_bounds( open_menu_pos, model_options_menu.size )
+        local is_m1_pressed = input.is_button_pressed( MOUSE_LEFT )
+
+        local is_preventing_close = model_options_menu:is_something_preventing_closing( )
+
+        if is_m1_pressed and not in_menu_bounds and not is_preventing_close then
+            model_options_menu:toggle_visibility( false )
+            open_menu = nil
+            open_menu_pos = nil
+        end
+    end
+
+    model_options_callback( )
+end
 
 local healthbar_obj = docker.slider( 'health', { }, function( self, ent )
     local health_pc = ent:GetHealth( ) / ent:GetMaxHealth( )
@@ -2955,11 +3169,106 @@ local function draw_preview_esp( ent )
     item_bank.size = vector( camW, 70 )
 end
 
+-- try chams
+local myEntModelName = nil
+local drawn_entities = { }
+
+local function dist_to_color( dist, color_1, color_2 )
+    local max_dist = 6
+
+    local diff = color( color_2.r - color_1.r, color_2.g - color_1.g, color_2.b - color_1.b )
+
+    local pc = dist / max_dist
+
+    pc = 1 - clamp( pc, 0, 1 )
+
+    return color(
+        color_1.r + math.floor( diff.r * pc ),
+        color_1.g + math.floor( diff.g * pc ),
+        color_1.b + math.floor( diff.b * pc )
+    )
+end
+
+local function onDrawModel( drawModelContext )
+    local lp = entities.GetLocalPlayer( )
+    local mat = selected_mat_data.material
+
+    if not myEnt or not mat then return end
+
+    local ctx_ent = drawModelContext:GetEntity( )
+
+    local overriden_color = nil
+    if ctx_ent and lp then
+        -- were doing actual players
+        local is_player = ctx_ent:IsPlayer( )
+
+        if not is_player then return end
+
+        if ctx_ent:GetTeamNumber( ) == lp:GetTeamNumber( ) then return end
+
+        local index = tostring( ctx_ent:GetIndex( ) )
+
+        if selected_mat_data.backtrack_mod then
+            if not drawn_entities[ index ] then
+                drawn_entities[ index ] = 1
+            else
+                drawn_entities[ index ] = drawn_entities[ index ] + 1
+            end
+
+            if drawn_entities[ index ] > 1 then
+                overriden_color = dist_to_color( drawn_entities[ index ], selected_mat_data.backtrack_start, selected_mat_data.backtrack_end )
+            end
+        end
+    else
+        if drawModelContext:GetModelName( ) ~= myEntModelName then return end
+    end
+
+    local r, g, b, a = selected_mat_data.color_override:unpack( )
+
+
+    if overriden_color then
+        r, g, b, a = overriden_color:unpack( )
+    end
+
+    local material = materials_key_to_mat[ mat ]
+
+    if mat == 'flat' or mat == 'glow' then
+        material:SetShaderParam( '$color', Vector3( r / 255, g / 255, b / 255 ) )
+        material:SetShaderParam( '$color2', Vector3( r / 255, g / 255, b / 255 ) )
+    else
+        material:SetShaderParam( '$envmaptint', Vector3( r / 255, g / 255, b / 255 ) )
+    end
+
+    material:SetMaterialVarFlag( 268435456, selected_mat_data.wireframe )
+
+    drawModelContext:ForcedMaterialOverride( material )
+
+    if selected_mat_data.accurate_color then
+        drawModelContext:SuppressEngineLighting( )
+    end
+end
+
+callbacks.Unregister( 'DrawModel', 'hook123' )
+callbacks.Register("DrawModel", "hook123", onDrawModel)
+
 callbacks.Register("Draw", function( )
+    drawn_entities= { }
+
     input.update_keys( )
 
-    if input.is_button_pressed( KEY_LALT ) then
+    if myEnt then
+        if not myEntModelName then
+            myEntModelName = models.GetModelName( myEnt:GetModel( ) )
+        end
+    end
+
+    if input.is_button_pressed( KEY_INSERT ) then
         menu_opened = not menu_opened
+
+        if not menu_opened and myEnt then
+            myEnt:Release( )
+            myEnt = nil
+        end
     end
 
     render_enemy_esp( )
@@ -2974,6 +3283,8 @@ callbacks.Register("Draw", function( )
     new_bottom_area:on_draw( )
     new_right_area:on_draw( )
 
+    handle_model_menu( )
+
     -- handle open menu
     if open_menu and open_menu_pos then
         open_menu:render( open_menu_pos )
@@ -2985,27 +3296,16 @@ callbacks.Register("Draw", function( )
 
     draw_preview_esp( myEnt )
 
-    -- if pos_model and pos_model[ 1 ] and pos_model[ 2 ] then
-    --     renderer.circle(
-    --         vector( pos_model[ 1 ], pos_model[ 2 ] ),
-    --         10,
-    --         color( 255 )
+    -- local cam_pos = client.WorldToScreen( customView.origin )
+
+    -- if cam_pos and cam_pos[ 1 ] and cam_pos[ 2 ] then
+    --     renderer.circle_filled(
+    --         vector( cam_pos[ 1 ], cam_pos[ 2 ] ),
+    --         4,
+    --         color( 255, 0, 0 )
     --     )
     -- end
-
-    local cam_pos = client.WorldToScreen( customView.origin )
-
-    if cam_pos and cam_pos[ 1 ] and cam_pos[ 2 ] then
-        renderer.circle_filled(
-            vector( cam_pos[ 1 ], cam_pos[ 2 ] ),
-            4,
-            color( 255, 0, 0 )
-        )
-    end
-
-    collectgarbage("collect")
 end)
-
 
 callbacks.Register( 'Unload', function( )
     if myEnt then
