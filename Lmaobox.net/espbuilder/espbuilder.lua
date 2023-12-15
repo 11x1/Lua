@@ -1,7 +1,8 @@
 -- Wrappers for everything because this api feels like neverlose's on release
 -- I just cant handle the camelcase sorry xx
 
-local config_table = { [ 'name' ] = { [ 'include entity index' ] = true, [ 'select font' ] = 1, [ 'text color' ] = { 200, 200, 200, 255 }, [ 'area_id' ] = '1' }, [ 'health' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 100, 255, 100, 255 }, [ 'hide on full' ] = true, [ 'area_id' ] = '2' }, [ 'overheal' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 237, 233, 157, 255 }, [ 'area_id' ] = 'nil' }, [ 'scoped' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 50, 200, 152, 255 }, [ 'area_id' ] = 'nil' }, [ 'distance' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 172, 163, 163, 163 }, [ 'area_id' ] = '3' }, [ 'model_options_menu' ] = { [ 'override material' ] = true, [ 'wireframe' ] = false, [ 'chams' ] = 3, [ 'chams color' ] = { 0, 67, 110, 255 }, [ 'backtrack modulation' ] = true, [ 'backtrack start' ] = { 0, 67, 110, 255 }, [ 'backtrack end' ] = { 109, 21, 55, 255 } }, [ 'health' ] = { [ 'area_id' ] = '2',[ 'thickness' ] = 7 }, [ 'blinking slider' ] = { [ 'area_id' ] = 'nil',[ 'thickness' ] = 3 }, [ 'slider3' ] = { [ 'area_id' ] = '3',[ 'thickness' ] = 5 } }
+-- unload script and check console for the config
+local config_table = { [ 'name' ] = { [ 'include entity index' ] = false, [ 'select font' ] = 1, [ 'text color' ] = { 200, 200, 200, 255 }, [ 'area_id' ] = '1' }, [ 'health' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 100, 255, 100, 255 }, [ 'hide on full' ] = true, [ 'area_id' ] = '2' }, [ 'overheal' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 237, 233, 157, 255 }, [ 'area_id' ] = '4' }, [ 'scoped' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 50, 200, 152, 255 }, [ 'area_id' ] = '4' }, [ 'ubercharged' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 255, 100, 100, 255 }, [ 'area_id' ] = '4' }, [ 'cloaked' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 150, 100, 255, 255 }, [ 'area_id' ] = '4' }, [ 'bonk' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 255, 255, 0, 255 }, [ 'area_id' ] = '4' }, [ 'distance' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 178, 178, 178, 255 }, [ 'area_id' ] = '3' }, [ 'charging' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 255, 0, 0, 255 }, [ 'area_id' ] = '4' }, [ 'covered' ] = { [ 'select font' ] = 1, [ 'jarate' ] = { 255, 215, 0, 255 }, [ 'milk' ] = { 255, 255, 255, 255 }, [ 'both' ] = { 230, 80, 140, 255 }, [ 'area_id' ] = '4' }, [ 'model_options_menu' ] = { [ 'box style' ] = 1, [ 'override material' ] = true, [ 'wireframe' ] = false, [ 'chams' ] = 3, [ 'chams color' ] = { 50, 91, 117, 255 }, [ 'backtrack modulation' ] = true, [ 'backtrack start' ] = { 0, 67, 110, 255 }, [ 'backtrack end' ] = { 109, 21, 55, 255 } }, [ 'health' ] = { [ 'bar color' ] = { 0, 255, 0, 255 },[ 'area_id' ] = '2',[ 'thickness' ] = 5 } }
 
 local vector = { }
 local vector_mt = { }
@@ -556,7 +557,6 @@ function entity.get_players( only_enemies )
     return return_players
 end
 
-local esp_font = renderer.create_font( 'Verdana', 12, 100, 'ao' )
 local menu_opened = true
 
 local myEnt = nil
@@ -582,6 +582,8 @@ local camW = 400
 local camH = 300 * 1.2
 local camStartX = 400
 local camStartY = 300
+
+local dragging_camera = false
 
 local cameraTexture = materials.CreateTextureRenderTarget( "cameraTexture123", camW, camH )
 local cameraMaterial = materials.Create( "cameraMaterial123", [[
@@ -642,13 +644,10 @@ callbacks.Register("PostRenderView", function(view)
     customView.aspectRatio = aspect_ratio
     customView.zFar = 170
     customView.zNear = 120
-
-    camW = math.floor( camH / scr_w * scr_h )
     
     render.Push3DView( customView, E_ClearFlags.VIEW_CLEAR_COLOR | E_ClearFlags.VIEW_CLEAR_DEPTH, cameraTexture )
     render.ViewDrawScene( false, false, customView )
     render.PopView( )
-    render.DrawScreenSpaceRectangle( cameraMaterial, camStartX, camStartY, camW, camH, 0, 0, camW, camH, camW, camH )
 
     our_view = customView
 end)
@@ -704,7 +703,7 @@ local arial = renderer.create_font( 'Arial', 10, 0, 'ao' )
 local verdana = renderer.create_font( 'Verdana', 10, 0, 'ao' )
 
 local esp = {
-    box = false,
+    box = nil,
     font = preview_text_font
 }
 
@@ -712,7 +711,141 @@ function esp.set_font( font )
     esp.font = font
 end
 
-local function render_preview_2d_box( ent, mins, maxs )
+
+local function render_2d_box( box_start, box_size )
+    if esp.box == 'rectangle' then
+        renderer.rect(
+            box_start + vector( 1, 1 ),
+            box_size - vector( 2, 2 ),
+            color( 255 )
+        )
+    elseif esp.box == 'outline' then
+        renderer.rect(
+            box_start + vector( 1, 0 ),
+            box_size - vector( 2, 0 ),
+            color( 0 )
+        )
+
+        renderer.rect(
+            box_start + vector( 2, 1 ),
+            box_size - vector( 4, 2 ),
+            color( 255 )
+        )
+
+        renderer.rect(
+            box_start + vector( 3, 2 ),
+            box_size - vector( 6, 4 ),
+            color( 0 )
+        )
+    elseif esp.box == 'corners' then
+        local width = math.floor( box_size.x * 0.3 )
+        local height = width
+
+        -- ! please someone refactor this this looks horrible oh my god
+
+        -- top left
+        renderer.rect(
+            box_start + vector( 1, 0 ),
+            vector( 3, height ),
+            color( 0 )
+        )
+
+        renderer.rect(
+            box_start + vector( 1, 0 ),
+            vector( width, 3 ),
+            color( 0 )
+        )
+
+        renderer.line(
+            box_start + vector( 2, 1 ),
+            box_start + vector( width, 1 ),
+            color( 255 )
+        )
+
+        renderer.line(
+            box_start + vector( 2, 2 ),
+            box_start + vector( 2, height - 1 ),
+            color( 255 )
+        )
+
+        -- lower right
+        renderer.rect(
+            box_start + box_size - vector( width, 3 ),
+            vector( width, 3 ),
+            color( 0 )
+        )
+
+        renderer.rect(
+            box_start + box_size - vector( 3, height ),
+            vector( 3, height ),
+            color( 0 )
+        )
+
+        renderer.line(
+            box_start + box_size - vector( width - 1, 2 ),
+            box_start + box_size - vector( 1, 2 ),
+            color( 255 )
+        )
+
+        renderer.line(
+            box_start + box_size - vector( 2, height - 1 ),
+            box_start + box_size - vector( 2, 1 ),
+            color( 255 )
+        )
+
+        -- top right
+        renderer.rect(
+            box_start + vector( box_size.x - width, 0 ),
+            vector( width, 3 ),
+            color( 0 )
+        )
+
+        renderer.rect(
+            box_start + vector( box_size.x - 3, 0 ),
+            vector( 3, height ),
+            color( 0 )
+        )
+
+        renderer.line(
+            box_start + vector( box_size.x - width + 1, 1 ),
+            box_start + vector( box_size.x - 1, 1 ),
+            color( 255 )
+        )
+
+        renderer.line(
+            box_start + vector( box_size.x - 2, 2 ),
+            box_start + vector( box_size.x - 2, height - 1 ),
+            color( 255 )
+        )
+
+        -- bottom left
+        renderer.rect(
+            box_start + vector( 1, box_size.y - height ),
+            vector( 3, height ),
+            color( 0 )
+        )
+
+        renderer.rect(
+            box_start + vector( 1, box_size.y - 3 ),
+            vector( width, 3 ),
+            color( 0 )
+        )
+
+        renderer.line(
+            box_start + vector( 2, box_size.y - height + 1 ),
+            box_start + vector( 2, box_size.y - 1 ),
+            color( 255 )
+        )
+
+        renderer.line(
+            box_start + vector( 2, box_size.y - 2 ),
+            box_start + vector( width, box_size.y - 2 ),
+            color( 255 )
+        )
+    end
+end
+
+local function get_2d_box_pos_size( ent, mins, maxs )
     local ent_pos = ent:GetAbsOrigin( )
 
     local bbox_min = ent_pos + mins
@@ -722,7 +855,7 @@ local function render_preview_2d_box( ent, mins, maxs )
 
     local pos_screen = get_view_pos2d( ent_pos, our_view )
     local top_screen = get_view_pos2d( top, our_view )
-    
+
     if not pos_screen or not top_screen then return end
 
     local pos = vector(
@@ -734,12 +867,6 @@ local function render_preview_2d_box( ent, mins, maxs )
         math.floor( ( pos_screen.y - top_screen.y ) / 2 ),
         pos_screen.y - top_screen.y
     )
-
-    if esp.box then
-        renderer.rect(
-            pos, size, color( 255 )
-        )
-    end
 
     return pos, size
 end
@@ -1665,6 +1792,159 @@ local function gen_area_id( )
     return tostring( area_id_iterator )
 end
 
+local docker_bank = { }
+
+function docker_bank.new( title, pos, max_width )
+    local docker_bank_obj = { }
+
+    docker_bank_obj.title = title
+
+    docker_bank_obj.pos = pos
+    docker_bank_obj.max_width = max_width
+
+    docker_bank_obj.size = vector( max_width, 0 )
+
+    docker_bank_obj.items = { }
+    docker_bank_obj.keys = { }
+
+    function docker_bank_obj:add( docker_obj )
+        table.insert( self.keys, docker_obj.id )
+        docker_bank_obj.items[ docker_obj.id ] = docker_obj
+
+        docker_obj.backup_bank = self
+    end
+
+    function docker_bank_obj:remove( docker_obj )
+        table.remove( self.keys, docker_obj.id )
+        docker_bank_obj.items[ docker_obj.id ] = nil
+    end
+
+    function docker_bank_obj:draw( )
+        -- this could be sped up by caching the posistions
+        local row = 1
+        local offset = 0
+
+        local remove_next = { }
+
+        renderer.use_font( preview_text_font )
+        renderer.text(
+            self.pos + vector( 5, 0 ),
+            color( 255 ),
+            self.title
+        )
+
+        local text_start = self.pos + vector( 5, 0 )
+
+        if #self.keys == 0 then
+            renderer.text(
+                text_start + vector( 0, row * 16 ),
+                color( 255, 100 ),
+                'no elements left'
+            )
+        end
+
+        for key_idx = 1, #self.keys do
+            local docker_obj = self.items[ self.keys[ key_idx ] ]
+
+            local start_pos = text_start + vector( offset, row * 16 )
+
+            if not docker_obj then goto continue end
+
+            local name = docker_obj.text
+
+            local text_sz = renderer.measure_text( name )
+
+            local in_bounds = is_in_bounds( start_pos, text_sz )
+            local mouse_held = input.is_key_down( MOUSE_LEFT )
+
+            local mouse = input.get_mouse_pos( )
+            local x, y = table.unpack( mouse )
+            local mouse_pos = vector( x, y )
+
+            if not is_changing_view and in_bounds and mouse_held and dragging_id == nil and docker_obj.dragging_pos == nil then
+                dragging_id = docker_obj.id
+                self.dragging_difference = start_pos - mouse_pos
+            end
+
+            -- were dragging this element
+            if dragging_id == docker_obj.id and mouse_held then
+                docker_obj.dragging_pos = mouse_pos + self.dragging_difference
+
+                start_pos = docker_obj.dragging_pos
+
+                docker_obj:handle_drag( )
+            end
+
+            if dragging_id == docker_obj.id and not mouse_held then
+                dragging_id = nil
+
+                local new_parent = docker_obj:handle_drop( )
+
+                if new_parent then
+                    table.insert( remove_next, docker_obj )
+                    --print( 'removed bank, attempting to assign new parent (area)' )
+
+                    new_parent:handle_drop( docker_obj )
+                end
+            end
+
+            local bg_color = in_bounds and color( 100 ) or color( 50 )
+
+            renderer.rect_filled(
+                start_pos,
+                text_sz,
+                bg_color
+            )
+
+            renderer.text(
+                start_pos,
+                color( 255 ),
+                name
+            )
+
+            if offset - text_sz.x >= self.max_width then
+                row = row + 1
+                offset = 0
+            else
+                offset = offset + text_sz.x + 5
+            end
+
+            ::continue::
+        end
+
+        for i = 1, #remove_next do
+            self:remove( remove_next[ i ] )
+        end
+
+        -- cleanup nil keys
+        local new_keys = { }
+        for key = 1, #self.keys do
+            if self.keys[ key ] then
+                table.insert( new_keys, self.keys[ key ] )
+            end
+        end
+
+        self.keys = new_keys
+        self.size.y = 16 * ( row + 2 )
+    end
+
+    return docker_bank_obj
+end
+
+local base_pos = vector( 400, 200 )
+
+local item_bank_bars = docker_bank.new(
+    'slider objects',
+    base_pos + vector( 125, 300 ),
+    75
+)
+
+local item_bank_text = docker_bank.new(
+    'text items',
+    base_pos + vector( 125, 310 ),
+    75
+)
+
 function docker.text( text, given_options, callback )
     local text_obj = { }
 
@@ -1959,6 +2239,8 @@ function docker.text( text, given_options, callback )
     end
 
     table.insert( docker_texts, text_obj )
+    item_bank_text:add( text_obj )
+
     return text_obj
 end
 
@@ -2009,6 +2291,12 @@ function docker.slider( text, given_options, callback )
         local config_str = ( '[ \'%s\' ] = %s' ):format( self.text, menu_config_str )
 
         return config_str
+    end
+
+    function slider_obj:get_option( name )
+        if #self.options_menu.options == 0 then return nil end
+
+        return self.options_menu.options_dict[ name ]
     end
 
     function slider_obj:set_config( config_data )
@@ -2093,6 +2381,49 @@ function docker.slider( text, given_options, callback )
     function slider_obj:callback( ... )
         if self.callback_fn then
             return self.callback_fn( self, ... )
+        end
+    end
+
+    function slider_obj:handle_options_menu( params )
+        local pos = params.pos
+        local size = params.size
+
+        local in_bounds = is_in_bounds( pos, size )
+        
+        local is_mouse2_pressed = input.is_button_pressed( MOUSE_RIGHT )
+
+        local opt_menu = self.options_menu
+
+        if opt_menu == nil then return end
+
+        local preventing_close = opt_menu:is_something_preventing_closing( )
+
+        if not is_changing_view and in_bounds and is_mouse2_pressed then
+            local new_state = not opt_menu.open
+
+            if new_state == false and not preventing_close then
+                opt_menu:toggle_visibility( new_state )
+            else
+                opt_menu:toggle_visibility( )
+            end
+
+            if dragging_id ~= nil then
+                opt_menu:toggle_visibility( false )
+            end
+        end
+
+        if is_mouse2_pressed and not in_bounds then
+            opt_menu:toggle_visibility( false )
+        end
+
+        local is_mouse1_pressed = input.is_button_pressed( MOUSE_LEFT )
+        local menu_start = pos + vector( size.x + option_pad, 0 )
+        local in_menu_bounds = is_in_bounds( menu_start, opt_menu.size )
+
+        if is_mouse1_pressed and not in_menu_bounds then
+            if not preventing_close then
+                opt_menu:toggle_visibility( false )
+            end
         end
     end
 
@@ -2297,6 +2628,7 @@ function docker.slider( text, given_options, callback )
     end
 
     table.insert( docker_sliders, slider_obj )
+    item_bank_bars:add( slider_obj )
     return slider_obj
 end
 
@@ -2494,6 +2826,28 @@ function docker_area.new( pos, size, left_align_or_align_top, force_align, disal
 
             if not slider then goto continue end
 
+            -- try with is_preview, lua doesnt allow checking how many params there are so we do this
+            local ok, preview_value, gave_preview = pcall( slider.callback, slider, myEnt )
+
+            if not ok then -- if ent or sm went bad, try is_preview to true
+                -- we expect only one return value
+                ok, preview_value = pcall( slider.callback, slider, myEnt, true )
+            else
+                ok, preview_value = pcall( slider.callback, slider, myEnt, true )
+
+                if preview_value == nil then
+                    if gave_preview ~= nil then
+                        preview_value = gave_preview
+                    end
+                end
+            end
+
+            if preview_value == nil then
+                error( ( 'Please check your "%s" callback function. Tried to give it an entity and is_preview=true, all matching calls failed to return a preview value.' ):format( text.text ) )
+            end
+
+            slider.value_frac = preview_value
+
             local cur_slider_thickness = slider.thickness
 
             -- figure out the starting position
@@ -2504,17 +2858,39 @@ function docker_area.new( pos, size, left_align_or_align_top, force_align, disal
             end
 
             local slider_length = self.flow == docker_area_flow[ 'vertical' ] and self.size.y or self.size.x
+            local slider_width = self.flow == docker_area_flow[ 'vertical' ] and slider.thickness or slider_length
+            local slider_height = self.flow == docker_area_flow[ 'vertical' ] and slider_length or slider.thickness
 
             local slider_props = {
                 pos = slider_start,
                 length = slider_length,
-                area = self
+                area = self,
+                size = vector( slider_width, slider_height )
             }
 
             slider:handle_area_drag( slider_props )
 
             if slider.parent.id == self.id then
                 slider:render( slider_props )
+            end
+
+            if slider.options_menu then
+                slider:handle_options_menu( slider_props )
+
+                if slider.options_menu.open and open_menu == nil then -- no menu open and our menu open
+                    open_menu = slider.options_menu -- set menu and pos
+                    open_menu_pos = slider_props.pos + vector( option_pad + slider_width, 0 )
+                end
+
+                -- open menu and matcehs ours
+                if open_menu and open_menu.id == slider.options_menu.id then
+                    open_menu_pos = slider_props.pos + vector( option_pad + slider_width, 0 ) -- update pos
+
+                    if not slider.options_menu.open or dragging_id == slider.id then -- if the menu is closed, set new open menu as nil, OR if were dragging the element
+                        open_menu = nil
+                        open_menu_pos = nil
+                    end
+                end
             end
 
             if self.flow == docker_area_flow[ 'vertical' ] and not self.inverted then
@@ -2635,131 +3011,6 @@ function docker_area.new( pos, size, left_align_or_align_top, force_align, disal
     return docker_area_obj
 end
 
-local docker_bank = { }
-
-function docker_bank.new( pos, max_width )
-    local docker_bank_obj = { }
-
-    docker_bank_obj.pos = pos
-    docker_bank_obj.max_width = max_width
-
-    docker_bank_obj.items = { }
-    docker_bank_obj.keys = { }
-
-    function docker_bank_obj:add( docker_obj )
-        table.insert( self.keys, docker_obj.id )
-        docker_bank_obj.items[ docker_obj.id ] = docker_obj
-
-        docker_obj.backup_bank = self
-    end
-
-    function docker_bank_obj:remove( docker_obj )
-        table.remove( self.keys, docker_obj.id )
-        docker_bank_obj.items[ docker_obj.id ] = nil
-    end
-
-    function docker_bank_obj:draw( )
-        -- this could be sped up by caching the posistions
-        local row = 1
-        local offset = 0
-
-        local remove_next = { }
-
-        for key_idx = 1, #self.keys do
-            local docker_obj = self.items[ self.keys[ key_idx ] ]
-
-            local start_pos = self.pos + vector( offset, row * 16 )
-
-            if not docker_obj then goto continue end
-
-            local name = docker_obj.text
-
-            local text_sz = renderer.measure_text( name )
-
-            local in_bounds = is_in_bounds( start_pos, text_sz )
-            local mouse_held = input.is_key_down( MOUSE_LEFT )
-
-            local mouse = input.get_mouse_pos( )
-            local x, y = table.unpack( mouse )
-            local mouse_pos = vector( x, y )
-
-            if not is_changing_view and in_bounds and mouse_held and dragging_id == nil and docker_obj.dragging_pos == nil then
-                dragging_id = docker_obj.id
-                self.dragging_difference = start_pos - mouse_pos
-            end
-
-            -- were dragging this element
-            if dragging_id == docker_obj.id and mouse_held then
-                docker_obj.dragging_pos = mouse_pos + self.dragging_difference
-
-                start_pos = docker_obj.dragging_pos
-
-                docker_obj:handle_drag( )
-            end
-
-            if dragging_id == docker_obj.id and not mouse_held then
-                dragging_id = nil
-
-                local new_parent = docker_obj:handle_drop( )
-
-                if new_parent then
-                    table.insert( remove_next, docker_obj )
-                    --print( 'removed bank, attempting to assign new parent (area)' )
-
-                    new_parent:handle_drop( docker_obj )
-                end
-            end
-
-            local bg_color = in_bounds and color( 100 ) or color( 50 )
-
-            renderer.rect_filled(
-                start_pos,
-                text_sz,
-                bg_color
-            )
-
-            renderer.text(
-                start_pos,
-                color( 255 ),
-                name
-            )
-
-            offset = offset + text_sz.x + 5
-
-            if offset >= self.max_width then
-                row = row + 1
-                offset = 0
-            end
-
-            ::continue::
-        end
-
-        for i = 1, #remove_next do
-            self:remove( remove_next[ i ] )
-        end
-
-        -- cleanup nil keys
-        local new_keys = { }
-        for key = 1, #self.keys do
-            if self.keys[ key ] then
-                table.insert( new_keys, self.keys[ key ] )
-            end
-        end
-
-        self.keys = new_keys
-    end
-
-    return docker_bank_obj
-end
-
-
-local base_pos = vector( 400, 200 )
-
-local item_bank = docker_bank.new(
-    base_pos + vector( 125, 310 ),
-    75
-)
-
 local new_top_area = docker_area.new(
     base_pos + vector( 150, 80 ),
     vector( 50, 70 ),
@@ -2849,6 +3100,7 @@ local selected_mat_data = {
 }
 
 local model_options_menu = options_menu.new({ 
+    options.new_combo( 'box style', 'none', 'rectangle', 'outline', 'corners' ),
     options.new_checkbox( 'override material', false ),
     options.new_checkbox( 'wireframe', false ),
     options.new_combo( 'chams', table.unpack( materials_list ) ),
@@ -2860,6 +3112,9 @@ local model_options_menu = options_menu.new({
 
 local function model_options_callback( )
     local self = model_options_menu
+
+    local box_style_opt = self:get_option( 'box style' )
+
     local override_mat_opt = self:get_option( 'override material' )
 
     local wireframe_opt = self:get_option( 'wireframe' )
@@ -2880,6 +3135,9 @@ local function model_options_callback( )
 
     backtrack_start_opt:set_visible( should_override_mat and override_backtrack )
     backtrack_end_opt:set_visible( should_override_mat and override_backtrack )
+
+    local _, box_style = box_style_opt:get( )
+    esp.box = box_style
 
     if should_override_mat then
         local _, name = material_opt:get( )
@@ -2912,7 +3170,7 @@ local function handle_model_menu( )
     local x, y = table.unpack( mouse )
     local mouse_pos = vector( x, y )
 
-    if in_bounds and not dragging_id and not is_changing_view then
+    if in_bounds and not dragging_id and not is_changing_view and not model_options_menu.open and not open_menu then
         renderer.rect_filled(
             start_pos,
             size,
@@ -2948,31 +3206,23 @@ local function handle_model_menu( )
     model_options_callback( )
 end
 
-local healthbar_obj = docker.slider( 'health', { }, function( self, ent )
-    local health_pc = ent:GetHealth( ) / ent:GetMaxHealth( )
+docker.slider( 'health', { options.new_colorpicker( 'bar color', color( 0, 255, 0 ) ) }, function( self, ent, is_preview )
+    local health_opt = self:get_option( 'bar color' )
 
-    self.color = color( 100, 255, 100 )
+    self.color = health_opt:get( )
+    
+    if is_preview then
+        return 1
+    end
+    
+    local health_pc = ent:GetHealth( ) / ent:GetMaxHealth( )
 
     health_pc = clamp( health_pc, 0, 1 )
 
     return health_pc
 end )
 
-local test_slider3 = docker.slider( 'blinking slider', { }, function( self, ent, start_pos, box_size )
-    if globals.TickCount( ) % 64 > 32 then
-        return
-    end
-
-    return 1
-end )
-
-local test_slider4 = docker.slider( 'slider3', { }, function( self )
-    self.color = color( 255 )
-    return 1
-end )
-
-
-local name_text = docker.text( 'name', { options.new_checkbox( 'include entity index', false ), options.new_combo( 'select font', 'pixel', 'arial', 'verdana' ), options.new_colorpicker( 'text color', color( 200, 200, 200 ) ) }, function( self, ent, is_preview )
+docker.text( 'name', { options.new_checkbox( 'include entity index', false ), options.new_combo( 'select font', 'pixel', 'arial', 'verdana' ), options.new_colorpicker( 'text color', color( 200, 200, 200 ) ) }, function( self, ent, is_preview )
     local entidx_opt = self:get_option( 'include entity index' )
     local font_opt = self:get_option( 'select font' )
     local color_opt = self:get_option( 'text color' )
@@ -3008,7 +3258,7 @@ local name_text = docker.text( 'name', { options.new_checkbox( 'include entity i
     return ent_name, 'you can also return here but youd have to remove the "is_preview" case 4 lines above'
 end )
 
-local health_text = docker.text(
+docker.text(
     'health',
     {
         options.new_combo( 'select font', 'pixel', 'arial', 'verdana' ),
@@ -3016,8 +3266,6 @@ local health_text = docker.text(
         options.new_checkbox( 'hide on full', true ) },
         
         function( self, ent, is_preview )
-    local ent_hp = ent:GetHealth( )
-
     local font_opt = self:get_option( 'select font' )
     local color_opt = self:get_option( 'text color' )
     local hide_on_full_opt = self:get_option( 'hide on full' )
@@ -3038,14 +3286,20 @@ local health_text = docker.text(
         return '175hp'
     end
 
+    local ent_hp = ent:GetHealth( )
+
     if ent_hp == ent:GetMaxHealth( ) and should_hide_hp then
-        return ''
+        return nil
     end
 
     return ent:IsAlive( ) and tostring( ent_hp ) .. 'hp' or nil
 end )
 
-local overheal_text = docker.text( 'overheal', { options.new_combo( 'select font', 'pixel', 'arial', 'verdana' ), options.new_colorpicker( 'text color', color( 237, 233, 157 ) ) }, function( self, ent )
+docker.text( 'overheal', { options.new_combo( 'select font', 'pixel', 'arial', 'verdana' ), options.new_colorpicker( 'text color', color( 237, 233, 157 ) ) }, function( self, ent, is_preview )
+    if is_preview then
+        return 'OH'
+    end
+    
     local overhealed = ent:GetHealth( ) > ent:GetMaxHealth( )
 
     local font_opt = self:get_option( 'select font' )
@@ -3060,10 +3314,10 @@ local overheal_text = docker.text( 'overheal', { options.new_combo( 'select font
         esp.set_font( verdana )
     end
 
-    return overhealed and 'OH' or nil, 'OH'
+    return overhealed and 'OH' or nil
 end )
 
-local scoped_text = docker.text( 'scoped', { options.new_combo( 'select font', 'pixel', 'arial', 'verdana'  ), options.new_colorpicker( 'text color', color( 50, 200, 152 ) ) }, function( self, ent, is_preview )
+docker.text( 'scoped', { options.new_combo( 'select font', 'pixel', 'arial', 'verdana'  ), options.new_colorpicker( 'text color', color( 50, 200, 152 ) ) }, function( self, ent, is_preview )
     local font_opt = self:get_option( 'select font' )
     local color_opt = self:get_option( 'text color' )
 
@@ -3077,25 +3331,18 @@ local scoped_text = docker.text( 'scoped', { options.new_combo( 'select font', '
     end
 
     if is_preview then
-        return 'SCOPE'
+        return 'scope'
     end
 
 
     if ent:InCond( TFCond_Zoomed ) then
-        return 'SCOPE'
+        return 'scope'
     end
 
     return nil
 end )
 
-local one_hammer_unit_in_cm = 1.904
-local one_meter_to_foot = 3.28084
-
-local distance_text = docker.text( 'distance', { options.new_combo( 'select font', 'pixel', 'arial', 'verdana'  ), options.new_colorpicker( 'text color', color( 255, 0, 0 ) ) }, function( self, ent )
-    local lp = entities.GetLocalPlayer( )
-
-    if not lp then return end
-
+docker.text( 'ubercharged', { options.new_combo( 'select font', 'pixel', 'arial', 'verdana'  ), options.new_colorpicker( 'text color', color( 255, 100, 100 ) ) }, function( self, ent, is_preview )
     local font_opt = self:get_option( 'select font' )
     local color_opt = self:get_option( 'text color' )
 
@@ -3108,6 +3355,104 @@ local distance_text = docker.text( 'distance', { options.new_combo( 'select font
         esp.set_font( verdana )
     end
 
+    if is_preview then
+        local texts = { 'ubercharged', 'kritz', 'uber & kritz' }
+        
+        local remainder = globals.CurTime( ) % #texts
+
+        local idx = remainder // 1 + 1
+
+        return texts[ idx ]
+    end
+
+    local is_uber = ent:InCond( TFCond_Ubercharged )
+    local is_kritz = ent:InCond( TFCond_Kritzkrieged )
+
+    if is_uber and is_kritz then
+        return 'uber & kritz'
+    elseif is_uber then
+        return 'ubercharged'
+    elseif is_kritz then
+        return 'kritz'
+    end
+
+    return nil
+end )
+
+docker.text( 'cloaked', { options.new_combo( 'select font', 'pixel', 'arial', 'verdana'  ), options.new_colorpicker( 'text color', color( 150, 100, 255 ) ) }, function( self, ent, is_preview )
+    local font_opt = self:get_option( 'select font' )
+    local color_opt = self:get_option( 'text color' )
+
+    local font_idx, font_name = font_opt:get( )
+    self:set_color( color_opt:get( ) )
+
+    if font_idx == 2 then
+        esp.set_font( arial )
+    elseif font_idx == 3 then
+        esp.set_font( verdana )
+    end
+
+    if is_preview then
+        return 'cloaked'
+    end
+
+
+    if ent:InCond( TFCond_Cloaked ) then
+        return 'cloaked'
+    end
+
+    return nil
+end )
+
+docker.text( 'bonk', { options.new_combo( 'select font', 'pixel', 'arial', 'verdana'  ), options.new_colorpicker( 'text color', color( 255, 255, 0 ) ) }, function( self, ent, is_preview )
+    local font_opt = self:get_option( 'select font' )
+    local color_opt = self:get_option( 'text color' )
+
+    local font_idx, font_name = font_opt:get( )
+    self:set_color( color_opt:get( ) )
+
+    if font_idx == 2 then
+        esp.set_font( arial )
+    elseif font_idx == 3 then
+        esp.set_font( verdana )
+    end
+
+    if is_preview then
+        return 'bonk!!!'
+    end
+
+
+    if ent:InCond( TFCond_Bonked ) then
+        return 'bonk!!!'
+    end
+
+    return nil
+end )
+
+local one_hammer_unit_in_cm = 1.904
+local one_meter_to_foot = 3.28084
+
+docker.text( 'distance', { options.new_combo( 'select font', 'pixel', 'arial', 'verdana'  ), options.new_colorpicker( 'text color', color( 255, 0, 0 ) ) }, function( self, ent, is_preview )
+    local font_opt = self:get_option( 'select font' )
+    local color_opt = self:get_option( 'text color' )
+
+    local font_idx, font_name = font_opt:get( )
+    self:set_color( color_opt:get( ) )
+
+    if font_idx == 2 then
+        esp.set_font( arial )
+    elseif font_idx == 3 then
+        esp.set_font( verdana )
+    end
+    
+    if is_preview then
+        return '64ft'
+    end
+    
+    local lp = entities.GetLocalPlayer( )
+
+    if not lp then return end
+
     local lp_pos = lp:GetAbsOrigin( )
     local ent_pos = ent:GetAbsOrigin( )
 
@@ -3117,32 +3462,92 @@ local distance_text = docker.text( 'distance', { options.new_combo( 'select font
     local dist_in_m = dist_in_cm / 100
     local dist_in_ft = dist_in_m * one_meter_to_foot
 
-    return tostring( math.floor( dist_in_ft + 0.5 ) ) .. 'ft', '64ft'
+    return tostring( math.floor( dist_in_ft + 0.5 ) ) .. 'ft'
 end )
 
+docker.text( 'charging', { options.new_combo( 'select font', 'pixel', 'arial', 'verdana'  ), options.new_colorpicker( 'text color', color( 255, 0, 0 ) ) }, function( self, ent, is_preview )
+    local font_opt = self:get_option( 'select font' )
+    local color_opt = self:get_option( 'text color' )
 
-item_bank:add( healthbar_obj )
-item_bank:add( test_slider3 )
-item_bank:add( test_slider4 )
-item_bank:add( name_text )
-item_bank:add( health_text )
-item_bank:add( overheal_text )
-item_bank:add( scoped_text )
-item_bank:add( distance_text )
+    local font_idx, font_name = font_opt:get( )
+    self:set_color( color_opt:get( ) )
+
+    if font_idx == 2 then
+        esp.set_font( arial )
+    elseif font_idx == 3 then
+        esp.set_font( verdana )
+    end
+
+    if is_preview then
+        return 'charging'
+    end
+
+
+    if ent:InCond( TFCond_Charging ) then
+        return 'charging'
+    end
+
+    return nil
+end )
+
+docker.text( 'covered', { options.new_combo( 'select font', 'pixel', 'arial', 'verdana'  ), options.new_colorpicker( 'jarate', color( 255, 215, 0 ) ), options.new_colorpicker( 'milk', color( 255 ) ), options.new_colorpicker( 'both', color( 230, 80, 140 ) ) }, function( self, ent, is_preview )
+    local font_opt = self:get_option( 'select font' )
+    local jarate_color_opt = self:get_option( 'jarate' )
+    local milk_color_opt = self:get_option( 'milk' )
+    local both_color_opt = self:get_option( 'both' )
+
+    local font_idx, font_name = font_opt:get( )
+
+    if font_idx == 2 then
+        esp.set_font( arial )
+    elseif font_idx == 3 then
+        esp.set_font( verdana )
+    end
+
+    if is_preview then
+        local texts = { 'jarate', 'milk', 'jarate & milk' }
+               
+        local remainder = globals.CurTime( ) % #texts
+
+        local idx = remainder // 1 + 1
+
+        local text_color = idx == 1 and jarate_color_opt:get( ) or
+                      idx == 2 and milk_color_opt:get( ) or
+                      idx == 3 and both_color_opt:get( )
+
+        self:set_color( text_color )
+        
+        return texts[ idx ]
+    end
+
+    local is_jarate = ent:InCond( TFCond_Jarated )
+    local is_milk = ent:InCond( TFCond_Milked )
+
+    if is_jarate and is_milk then
+        self:set_color( both_color_opt:get( ) )
+        return 'jarate & milk'
+    elseif is_jarate then
+        self:set_color( jarate_color_opt:get( ) )
+        return 'jarate'
+    elseif is_milk then
+        self:set_color( milk_color_opt:get( ) )
+        return 'milk'
+    end
+
+    return nil
+end )
 
 local function render_enemy_esp( )
-    local enemies = entity.get_players( true )
+    local lp = entities.GetLocalPlayer( )
 
-    if not enemies or #enemies == 0 then
+    local enemies = entities.FindByClass( 'CTFPlayer' )
+
+    if not enemies or not lp then
         return
     end
 
-    for i = 1, #enemies do
-        local player_obj = enemies[ i ]
-
-        local ent = player_obj.lbox_ref
-
-        if ent and player_mt.is_alive( player_obj ) and not player_mt.is_dormant( player_obj ) then
+    for _, ent in ipairs( enemies ) do
+        if ent ~= nil and ent:IsValid( ) and ent:IsAlive( ) and not ent:IsDormant( ) and ent:GetTeamNumber( ) ~= lp:GetTeamNumber( ) then
             local box_start, box_size = get_2d_box_bounds( ent )
 
             local offsets = { 
@@ -3153,6 +3558,137 @@ local function render_enemy_esp( )
             }
 
             if not box_start or not box_size then goto next_ent end
+
+            if esp.box == 'rectangle' then
+                renderer.rect(
+                    box_start + vector( 1, 1 ),
+                    box_size - vector( 2, 2 ),
+                    color( 255 )
+                )
+            elseif esp.box == 'outline' then
+                renderer.rect(
+                    box_start + vector( 1, 0 ),
+                    box_size - vector( 2, 0 ),
+                    color( 0 )
+                )
+
+                renderer.rect(
+                    box_start + vector( 2, 1 ),
+                    box_size - vector( 4, 2 ),
+                    color( 255 )
+                )
+
+                renderer.rect(
+                    box_start + vector( 3, 2 ),
+                    box_size - vector( 6, 4 ),
+                    color( 0 )
+                )
+            elseif esp.box == 'corners' then
+                local width = math.floor( box_size.x * 0.3 )
+                local height = width
+
+                -- ! please someone refactor this this looks horrible oh my god
+
+                -- top left
+                renderer.rect(
+                    box_start + vector( 1, 0 ),
+                    vector( 3, height ),
+                    color( 0 )
+                )
+
+                renderer.rect(
+                    box_start + vector( 1, 0 ),
+                    vector( width, 3 ),
+                    color( 0 )
+                )
+
+                renderer.line(
+                    box_start + vector( 2, 1 ),
+                    box_start + vector( width, 1 ),
+                    color( 255 )
+                )
+
+                renderer.line(
+                    box_start + vector( 2, 2 ),
+                    box_start + vector( 2, height - 1 ),
+                    color( 255 )
+                )
+
+                -- lower right
+                renderer.rect(
+                    box_start + box_size - vector( width, 3 ),
+                    vector( width, 3 ),
+                    color( 0 )
+                )
+
+                renderer.rect(
+                    box_start + box_size - vector( 3, height ),
+                    vector( 3, height ),
+                    color( 0 )
+                )
+
+                renderer.line(
+                    box_start + box_size - vector( width - 1, 2 ),
+                    box_start + box_size - vector( 1, 2 ),
+                    color( 255 )
+                )
+
+                renderer.line(
+                    box_start + box_size - vector( 2, height - 1 ),
+                    box_start + box_size - vector( 2, 1 ),
+                    color( 255 )
+                )
+
+                -- top right
+                renderer.rect(
+                    box_start + vector( box_size.x - width, 0 ),
+                    vector( width, 3 ),
+                    color( 0 )
+                )
+
+                renderer.rect(
+                    box_start + vector( box_size.x - 3, 0 ),
+                    vector( 3, height ),
+                    color( 0 )
+                )
+
+                renderer.line(
+                    box_start + vector( box_size.x - width + 1, 1 ),
+                    box_start + vector( box_size.x - 1, 1 ),
+                    color( 255 )
+                )
+
+                renderer.line(
+                    box_start + vector( box_size.x - 2, 2 ),
+                    box_start + vector( box_size.x - 2, height - 1 ),
+                    color( 255 )
+                )
+
+                -- bottom left
+                renderer.rect(
+                    box_start + vector( 1, box_size.y - height ),
+                    vector( 3, height ),
+                    color( 0 )
+                )
+
+                renderer.rect(
+                    box_start + vector( 1, box_size.y - 3 ),
+                    vector( width, 3 ),
+                    color( 0 )
+                )
+
+                renderer.line(
+                    box_start + vector( 2, box_size.y - height + 1 ),
+                    box_start + vector( 2, box_size.y - 1 ),
+                    color( 255 )
+                )
+
+                renderer.line(
+                    box_start + vector( 2, box_size.y - 2 ),
+                    box_start + vector( width, box_size.y - 2 ),
+                    color( 255 )
+                )
+            end
 
             local idx_to_startpos = {
                 [ new_top_area.id ] = box_start,
@@ -3190,6 +3726,7 @@ local function render_enemy_esp( )
 
                     local start_pos = idx_to_startpos[ area.id ]
                     local return_value = slider:callback( ent )
+
                     if return_value ~= nil then
                         local esp_area_box_size = get_box_size( area.id )
 
@@ -3275,17 +3812,18 @@ local function render_enemy_esp( )
 end
 
 local function draw_preview_esp( ent )
-    local ent_model = ent:GetModel( )
+    local box_start, box_size = vector( camStartX + 41, camStartY + 44 ), vector( 120, 240 )
 
-    if not ent_model then
-        return
+    if ent and ent:GetModel( ) then
+        local mins, maxs = models.GetModelBounds( ent:GetModel( ) )
+        local got_box_start, got_box_size = get_2d_box_pos_size( ent, mins, maxs )
+
+        if got_box_start ~= nil and got_box_size ~= nil then
+            box_start, box_size = got_box_start, got_box_size
+        end
     end
 
-    local mins, maxs = models.GetModelBounds( ent_model )
-
-    local box_start, box_size = render_preview_2d_box( ent, mins, maxs )
-
-    if not box_start or not box_size then return end
+    render_2d_box( box_start, box_size )
 
     new_top_area.pos = box_start - vector( 0, 70 )
     new_top_area.size = vector( box_size.x, 70 )
@@ -3298,10 +3836,6 @@ local function draw_preview_esp( ent )
 
     new_right_area.pos = box_start + vector(  box_size.x, 0 )
     new_right_area.size = vector( 70, box_size.y )
-
-
-    item_bank.pos = vector( camStartX, camStartY + camH + 20 )
-    item_bank.size = vector( camW, 70 )
 end
 
 -- try chams
@@ -3386,8 +3920,76 @@ end
 callbacks.Unregister( 'DrawModel', 'hook123' )
 callbacks.Register("DrawModel", "hook123", onDrawModel)
 
+local camera_drag_difference = vector( )
+local function draw_background( )
+    local left_overfill = 40
+    local right_overfill = 40
+    local top_overfill = 40
+
+    local height = camH + item_bank_bars.size.y + item_bank_bars.size.y + top_overfill
+    local padding = 5
+
+    local start_pos = vector( camStartX - left_overfill - padding, camStartY - top_overfill - padding )
+    local size = vector( camW + left_overfill + right_overfill + padding * 2, height + padding * 2 )
+
+    local add_y = ( start_pos.y + size.y ) - ( item_bank_text.pos.y + item_bank_text.size.y )
+
+    if add_y > 0 then
+        size.y = size.y + add_y
+    end
+
+    renderer.rect_filled(
+        start_pos,
+        size,
+        color( 0 )
+    )
+
+    -- render top bar to drag from
+    local top_bar_start = start_pos
+    local top_bar_size = vector( size.x, 20 )
+
+    local in_bounds = is_in_bounds( top_bar_start, top_bar_size )
+    local is_mouse1_down = input.is_key_down( MOUSE_LEFT )
+
+    local mouse = input.get_mouse_pos( )
+    local x, y = table.unpack( mouse )
+    local mouse_pos = vector( x, y )
+
+    if ( in_bounds and is_mouse1_down ) and not dragging_camera and not dragging_id then
+        dragging_camera = true
+        camera_drag_difference = vector( camStartX, camStartY ) - mouse_pos
+    end
+
+    if dragging_camera then
+        camStartX = mouse_pos.x + camera_drag_difference.x
+
+        camStartY = mouse_pos.y + camera_drag_difference.y
+    end
+
+    if not is_mouse1_down then
+        dragging_camera = false
+    end
+
+    local bar_color = ( in_bounds or dragging_camera ) and color( 40 ) or color( 30 )
+
+    renderer.rect_filled(
+        top_bar_start,
+        top_bar_size,
+        bar_color
+    )
+end
+
 callbacks.Register("Draw", function( )
     drawn_entities= { }
+
+    local scr_w, scr_h = draw.GetScreenSize( )
+    camW = math.floor( camH / scr_w * scr_h )
+
+    item_bank_bars.pos = vector( camStartX, camStartY + camH )
+    item_bank_bars.size = vector( camW, item_bank_bars.size.y )
+
+    item_bank_text.pos = item_bank_bars.pos + vector( 0, item_bank_bars.size.y )
+    item_bank_text.size = item_bank_bars.size
 
     input.update_keys( )
 
@@ -3403,33 +4005,47 @@ callbacks.Register("Draw", function( )
         if not menu_opened and myEnt then
             myEnt:Release( )
             myEnt = nil
+
+            if open_menu then
+                open_menu.open = false
+                open_menu = nil     
+            end
         end
     end
 
+    if menu_opened then
+        draw_background( )
+
+        if myEnt then
+            render.DrawScreenSpaceRectangle( cameraMaterial, camStartX, camStartY, camW, camH, 0, 0, camW, camH, camW, camH )
+        end
+
+        draw_preview_esp( myEnt )
+
+        renderer.use_font( default_font )
+        item_bank_text:draw( )
+        item_bank_bars:draw( )
+
+        new_top_area:on_draw( )
+        new_left_area:on_draw( )
+        new_bottom_area:on_draw( )
+        new_right_area:on_draw( )
+
+        handle_model_menu( )
+    end
+
     render_enemy_esp( )
-
-    if not myEnt or not our_view or not menu_opened then return end
-
-    renderer.use_font( default_font )
-    item_bank:draw( )
-
-    new_top_area:on_draw( )
-    new_left_area:on_draw( )
-    new_bottom_area:on_draw( )
-    new_right_area:on_draw( )
-
-    handle_model_menu( )
 
     -- handle open menu
     if open_menu and open_menu_pos then
         open_menu:render( open_menu_pos )
     end
 
-    if dragging_id == nil and open_menu == nil then
+    if not myEnt or not our_view or not menu_opened then return end
+
+    if dragging_id == nil and open_menu == nil and not dragging_camera then
         handle_model_spin( )
     end
-
-    draw_preview_esp( myEnt )
 
     -- local cam_pos = client.WorldToScreen( customView.origin )
 
@@ -3454,7 +4070,7 @@ local function load_config( )
             text_obj:set_config( text_config_data )
 
             if text_config_data[ 'area_id' ] ~= 'nil' then
-                item_bank:remove( text_obj )
+                item_bank_text:remove( text_obj )
             end
         end
     end
@@ -3468,7 +4084,7 @@ local function load_config( )
             slider_obj:set_config( slider_config_data )
 
             if slider_config_data[ 'area_id' ] ~= 'nil' then
-                item_bank:remove( slider_obj )
+                item_bank_bars:remove( slider_obj )
             end
         end
     end
