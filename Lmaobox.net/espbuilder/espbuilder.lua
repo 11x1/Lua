@@ -1,6 +1,8 @@
 -- Wrappers for everything because this api feels like neverlose's on release
 -- I just cant handle the camelcase sorry xx
 
+local config_table = { [ 'name' ] = { [ 'include entity index' ] = true, [ 'select font' ] = 1, [ 'text color' ] = { 200, 200, 200, 255 }, [ 'area_id' ] = '1' }, [ 'health' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 100, 255, 100, 255 }, [ 'hide on full' ] = true, [ 'area_id' ] = '2' }, [ 'overheal' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 237, 233, 157, 255 }, [ 'area_id' ] = 'nil' }, [ 'scoped' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 50, 200, 152, 255 }, [ 'area_id' ] = 'nil' }, [ 'distance' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 172, 163, 163, 163 }, [ 'area_id' ] = '3' }, [ 'model_options_menu' ] = { [ 'override material' ] = true, [ 'wireframe' ] = false, [ 'chams' ] = 3, [ 'chams color' ] = { 0, 67, 110, 255 }, [ 'backtrack modulation' ] = true, [ 'backtrack start' ] = { 0, 67, 110, 255 }, [ 'backtrack end' ] = { 109, 21, 55, 255 } }, [ 'health' ] = { [ 'area_id' ] = '2',[ 'thickness' ] = 7 }, [ 'blinking slider' ] = { [ 'area_id' ] = 'nil',[ 'thickness' ] = 3 }, [ 'slider3' ] = { [ 'area_id' ] = '3',[ 'thickness' ] = 5 } }
+
 local vector = { }
 local vector_mt = { }
 
@@ -823,6 +825,14 @@ function options.new_checkbox( name, default_value )
         return self.state
     end
 
+    function checkbox:get_config( )
+        return ( '[ \'%s\' ] = %s' ):format( self.name, self.state )
+    end
+
+    function checkbox:set_config( config_value )
+        self.state = config_value
+    end
+
     function checkbox:set_visible( new_vis_state )
         self.visible = new_vis_state
     end
@@ -927,6 +937,14 @@ function options.new_combo( name, ... )
 
     combo.hovered = false
     combo.topmost = true
+
+    function combo:get_config( )
+        return ( '[ \'%s\' ] = %s' ):format( self.name, self.selected )
+    end
+
+    function combo:set_config( config_value )
+        self.selected = config_value
+    end
 
     function combo:get( )
         return self.selected, self.items[ self.selected ]
@@ -1161,6 +1179,28 @@ function options.new_colorpicker( name, default_color )
         saturation = s,
         brightness = b,
     }
+
+    function colorpicker:get_config( )
+        return ( '[ \'%s\' ] = { %i, %i, %i, %i }' ):format( self.name, self.color:unpack( ) )
+    end
+
+    function colorpicker:set_config( config_value )
+        self.color = color( config_value[ 1 ], config_value[ 2 ], config_value[ 3 ], config_value[ 4 ] )
+
+        local h, s, b = color.rgb_to_hsb( self.color )
+
+        self.values = {
+            big = vector( s, 1 - b ),
+            hue = h / 360,
+            opacity = colorpicker.color.a
+        }
+    
+        self.areas = {
+            hue = h,
+            saturation = s,
+            brightness = b,
+        }
+    end
 
     function colorpicker:get( )
         return self.color
@@ -1491,6 +1531,26 @@ function options_menu.new( given_options )
         return self.options_dict[ opt_name ]
     end
 
+    function menu:get_config( )
+        local config_str_tbl = { }
+        for opt_idx = 1, #self.options do
+            local data = self.options[ opt_idx ]:get_config( )
+            table.insert( config_str_tbl, data )
+        end
+
+        return config_str_tbl
+    end
+
+    function menu:set_config( config_data )
+        for key, value in pairs( config_data ) do
+            local opt = self:get_option( key )
+
+            if opt then
+                opt:set_config( value )
+            end
+        end
+    end
+
     function menu:toggle_visibility( new_state )
         if new_state == nil then
             self.open = not self.open
@@ -1632,6 +1692,46 @@ function docker.text( text, given_options, callback )
         offset_pos = nil,
         flow = nil
     }
+
+    function text_obj:get_config( )
+        local menu_config_tbl = text_obj.options_menu and text_obj.options_menu:get_config( ) or nil
+
+        if not menu_config_tbl then
+            menu_config_tbl = { }
+        end
+
+        table.insert( menu_config_tbl, ( '[ \'area_id\' ] = \'%s\'' ):format( self.parent and self.parent.id or nil ) )
+
+        local menu_config_str = '{ ' .. table.concat( menu_config_tbl, ', ' ) .. ' }'
+
+        local config_str = ( '[ \'%s\' ] = %s' ):format( self.text, menu_config_str )
+
+        return config_str
+    end
+
+    function text_obj:set_config( config_data_tbl )
+        if not self.options_menu then return end
+
+        for key, value in pairs( config_data_tbl ) do
+            if key == 'area_id' then
+                if value ~= 'nil' then
+                    for area_idx = 1, #docker_areas do
+                        local area = docker_areas[ area_idx ]
+                        if area.id == value then
+                            area:add( self )
+                            break
+                        end
+                    end
+                end
+            else
+                local opt = self:get_option( key )
+
+                if opt then
+                    opt:set_config( value )
+                end
+            end
+        end
+    end
 
     function text_obj:get_option( name )
         if #self.options_menu.options == 0 then return nil end
@@ -1866,7 +1966,7 @@ function docker.slider( text, given_options, callback )
     local slider_obj = { }
 
     slider_obj.text = text
-    slider_obj.options = given_options
+    slider_obj.options_menu = #given_options > 0 and options_menu.new( given_options ) or nil
     slider_obj.callback_fn = callback
 
     slider_obj.thickness = 3
@@ -1893,6 +1993,41 @@ function docker.slider( text, given_options, callback )
     }
 
     slider_obj.last_poll = 0
+
+    function slider_obj:get_config( )
+        local menu_config_tbl = self.options_menu and self.options_menu:get_config( ) or nil
+
+        if not menu_config_tbl then
+            menu_config_tbl = { }
+        end
+
+        table.insert( menu_config_tbl, ( '[ \'area_id\' ] = \'%s\'' ):format( self.parent and self.parent.id or nil ) )
+        table.insert( menu_config_tbl, ( '[ \'thickness\' ] = %i' ):format( self.thickness ) )
+
+        local menu_config_str = '{ ' .. table.concat( menu_config_tbl, ',' ) .. ' }'
+
+        local config_str = ( '[ \'%s\' ] = %s' ):format( self.text, menu_config_str )
+
+        return config_str
+    end
+
+    function slider_obj:set_config( config_data )
+        for key, value in pairs( config_data ) do
+            if key == 'area_id' then
+                if value ~= 'nil' then
+                    for area_idx = 1, #docker_areas do
+                        local area = docker_areas[ area_idx ]
+                        if area.id == value then
+                            area:add( self )
+                            break
+                        end
+                    end
+                end
+            elseif key == 'thickness' then
+                self.thickness = value
+            end
+        end
+    end
 
     function slider_obj:handle_drag( )
         for area_idx = 1, #docker_areas do
@@ -3307,7 +3442,77 @@ callbacks.Register("Draw", function( )
     -- end
 end)
 
+local function load_config( )
+    if config_table == nil then return end
+
+    for obj_idx = 1, #docker_texts do
+        local text_obj = docker_texts[ obj_idx ]
+
+        if config_table[ text_obj.text ] then
+            local text_config_data = config_table[ text_obj.text ]
+
+            text_obj:set_config( text_config_data )
+
+            if text_config_data[ 'area_id' ] ~= 'nil' then
+                item_bank:remove( text_obj )
+            end
+        end
+    end
+
+    for obj_idx = 1, #docker_sliders do
+        local slider_obj = docker_sliders[ obj_idx ]
+
+        if config_table[ slider_obj.text ] then
+            local slider_config_data = config_table[ slider_obj.text ]
+
+            slider_obj:set_config( slider_config_data )
+
+            if slider_config_data[ 'area_id' ] ~= 'nil' then
+                item_bank:remove( slider_obj )
+            end
+        end
+    end
+
+    if config_table[ 'model_options_menu' ] then
+        local data = config_table[ 'model_options_menu' ]
+
+        model_options_menu:set_config( data )
+    end
+end
+
+load_config( )
+
+local function save_config( )
+    local configs_texts = { }
+    for i = 1, #docker_texts do
+        table.insert( configs_texts, docker_texts[ i ]:get_config( ) )
+    end
+
+    local configs_sliders = { }
+    for i = 1, #docker_sliders do
+        table.insert( configs_sliders, docker_sliders[ i ]:get_config( ) )
+    end
+
+    local slider_configs = table.concat( configs_sliders, ', ' )
+
+    local model_setts_tbl = model_options_menu:get_config( )
+    local model_setts = ( '[ \'model_options_menu\' ] = { %s }' ):format( table.concat( model_setts_tbl, ', ' ) )
+
+    table.insert( configs_texts, model_setts )
+    table.insert( configs_texts, slider_configs )
+
+    local config = table.concat( configs_texts, ', ' )
+
+    local minus_line = string.rep( '-', 25 )
+
+    print(
+        ( 'Please put the following text as the first line of the script to save your config.\n%s\n\nlocal config_table = { %s }\n\n%s' ):format( minus_line, config, minus_line )
+    )
+end
+
 callbacks.Register( 'Unload', function( )
+    save_config( )
+
     if myEnt then
         myEnt:Release( )
         myEnt = nil
