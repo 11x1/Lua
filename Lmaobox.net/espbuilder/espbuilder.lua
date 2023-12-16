@@ -2,7 +2,7 @@
 -- I just cant handle the camelcase sorry xx
 
 -- unload script and check console for the config
-local config_table = { [ 'name' ] = { [ 'include entity index' ] = false, [ 'select font' ] = 1, [ 'text color' ] = { 200, 200, 200, 255 }, [ 'area_id' ] = '1' }, [ 'health' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 100, 255, 100, 255 }, [ 'hide on full' ] = true, [ 'area_id' ] = '2' }, [ 'overheal' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 237, 233, 157, 255 }, [ 'area_id' ] = '4' }, [ 'scoped' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 50, 200, 152, 255 }, [ 'area_id' ] = '4' }, [ 'ubercharged' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 255, 100, 100, 255 }, [ 'area_id' ] = '4' }, [ 'cloaked' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 150, 100, 255, 255 }, [ 'area_id' ] = '4' }, [ 'bonk' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 255, 255, 0, 255 }, [ 'area_id' ] = '4' }, [ 'distance' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 178, 178, 178, 255 }, [ 'area_id' ] = '3' }, [ 'charging' ] = { [ 'select font' ] = 1, [ 'text color' ] = { 255, 0, 0, 255 }, [ 'area_id' ] = '4' }, [ 'covered' ] = { [ 'select font' ] = 1, [ 'jarate' ] = { 255, 215, 0, 255 }, [ 'milk' ] = { 255, 255, 255, 255 }, [ 'both' ] = { 230, 80, 140, 255 }, [ 'area_id' ] = '4' }, [ 'model_options_menu' ] = { [ 'box style' ] = 1, [ 'override material' ] = true, [ 'wireframe' ] = false, [ 'chams' ] = 3, [ 'chams color' ] = { 50, 91, 117, 255 }, [ 'backtrack modulation' ] = true, [ 'backtrack start' ] = { 0, 67, 110, 255 }, [ 'backtrack end' ] = { 109, 21, 55, 255 } }, [ 'health' ] = { [ 'bar color' ] = { 0, 255, 0, 255 },[ 'area_id' ] = '2',[ 'thickness' ] = 5 } }
+local config_table = { [ 'name' ] = { [ 'include entity index' ] = false, [ 'select font' ] = 'pixel', [ 'text color' ] = { 200, 200, 200, 255 }, [ 'area_id' ] = '1' }, [ 'health' ] = { [ 'select font' ] = 'pixel', [ 'text color' ] = { 100, 255, 100, 255 }, [ 'hide on full' ] = true, [ 'area_id' ] = '2' }, [ 'overheal' ] = { [ 'select font' ] = 'pixel', [ 'text color' ] = { 237, 233, 157, 255 }, [ 'area_id' ] = '4' }, [ 'scoped' ] = { [ 'select font' ] = 'pixel', [ 'text color' ] = { 50, 200, 152, 255 }, [ 'area_id' ] = '4' }, [ 'ubercharged' ] = { [ 'select font' ] = 'pixel', [ 'text color' ] = { 255, 100, 100, 255 }, [ 'area_id' ] = '4' }, [ 'cloaked' ] = { [ 'select font' ] = 'pixel', [ 'text color' ] = { 150, 100, 255, 255 }, [ 'area_id' ] = '4' }, [ 'bonk' ] = { [ 'select font' ] = 'pixel', [ 'text color' ] = { 255, 255, 0, 255 }, [ 'area_id' ] = '4' }, [ 'distance' ] = { [ 'select font' ] = 'pixel', [ 'text color' ] = { 178, 178, 178, 255 }, [ 'area_id' ] = '3' }, [ 'charging' ] = { [ 'select font' ] = 'pixel', [ 'text color' ] = { 255, 0, 0, 255 }, [ 'area_id' ] = '4' }, [ 'covered' ] = { [ 'select font' ] = 'pixel', [ 'jarate' ] = { 255, 215, 0, 255 }, [ 'milk' ] = { 255, 255, 255, 255 }, [ 'both' ] = { 230, 80, 140, 255 }, [ 'area_id' ] = '4' }, [ 'model_options_menu' ] = { [ 'box style' ] = 'none', [ 'override material' ] = true, [ 'wireframe' ] = false, [ 'chams' ] = 'flat', [ 'chams color' ] = { 50, 91, 117, 255 }, [ 'backtrack modulation' ] = true, [ 'backtrack start' ] = { 0, 67, 110, 255 }, [ 'backtrack end' ] = { 109, 21, 55, 255 } }, [ 'health' ] = { [ 'bar color' ] = { 0, 255, 0, 255 },[ 'area_id' ] = '2',[ 'thickness' ] = 5 } }
 
 local vector = { }
 local vector_mt = { }
@@ -55,6 +55,10 @@ function vector_mt.__tostring( self )
     return ( 'vector( %.2f, %.2f, %.2f )' ):format( self.x, self.y, self.z )
 end
 
+function vector_mt.unpack( self )
+    return self.x, self.y, self.z
+end
+
 function vector.new( x, y, z )
     local vx, vy, vz = x, y, z
 
@@ -74,7 +78,8 @@ function vector.new( x, y, z )
     local new_vec = {
         x = vx,
         y = vy,
-        z = vz
+        z = vz,
+        unpack = vector_mt.unpack
     }
 
     setmetatable( new_vec, vector_mt )
@@ -285,6 +290,19 @@ local renderer = {
 function renderer.line( s, e, c )
     draw.Color( c:unpack( ) )
     draw.Line( s.x, s.y, e.x, e.y )
+end
+
+function renderer.line3d( s, e, c )
+    local screen_pos1 = client.WorldToScreen( Vector3( s.x, s.y, s.z ) )
+    local screen_pos2 = client.WorldToScreen( Vector3( e.x, e.y, e.z ) )
+
+    if screen_pos1 and screen_pos2 then
+        renderer.line(
+            vector( screen_pos1[ 1 ], screen_pos1[ 2 ] ),
+            vector( screen_pos2[ 1 ], screen_pos2[ 2 ] ),
+            c
+        )
+    end
 end
 
 function renderer.rect( s, sz, c )
@@ -878,33 +896,67 @@ local function get_2d_box_bounds( ent )
         return nil
     end
 
-    local mins, maxs = models.GetModelBounds( ent_model )
+    local mins, maxs = models.GetModelRenderBounds( ent_model )
+
+     -- mins, maxs seemed very weird to me so i defaulted to hardcoded bbox size
+    local w, h = 40, 40
+
+    mins.x, mins.y = -w/2, -h/2
+    maxs.x, maxs.y = w, h
 
     local ent_pos = ent:GetAbsOrigin( )
-
-    local bbox_min = ent_pos + mins
-    local bbox_max = ent_pos + maxs
-
-    local top = ent_pos + Vector3( 0, 0, bbox_max.z - bbox_min.z );
-
-    local pos_screen = client.WorldToScreen( ent_pos )
-    local top_screen = client.WorldToScreen( top )
-
-    if not pos_screen or not top_screen then return end
-
-    pos_screen = vector( table.unpack( pos_screen ) )
-    top_screen = vector( table.unpack( top_screen ) )
     
-    if not pos_screen or not top_screen then return end
+    local all_corners = {
+        mins,
+        mins + Vector3( maxs.x, 0, 0 ),
+        mins + Vector3( maxs.x, maxs.y, 0 ),
+        mins + Vector3( 0, maxs.y, 0 ),
+        mins + Vector3( 0, maxs.y, maxs.z ),
+        mins + maxs,
+        mins + Vector3( maxs.x, 0, maxs.z ),
+        mins + Vector3( 0, 0, maxs.z ),
+    }
+
+    -- -- render 3d bbox
+    -- for i = 1, #all_corners do
+    --     for j = i + 1, #all_corners do
+    --         renderer.line3d( ent_pos + all_corners[ i ], ent_pos + all_corners[ j ], color( 255 ) )
+    --     end
+    -- end
+
+    for corner_idx = 1, #all_corners do
+        local corner_pos_abs = all_corners[ corner_idx ]
+        local corner_pos_relative = ent_pos + corner_pos_abs
+
+        local screen_pos = client.WorldToScreen( corner_pos_relative )
+
+        if not screen_pos then return end
+
+        all_corners[ corner_idx ] = vector( table.unpack( screen_pos ) )
+    end
+
+    -- sort table by y
+    table.sort( all_corners, function( pos1, pos2 )
+        return pos1.y < pos2.y
+    end )
+
+    local min_y = all_corners[ 1 ].y
+    local max_y = all_corners[ 8 ].y
+
+    -- sort table by x
+    table.sort( all_corners, function( pos1, pos2 )
+        return pos1.x < pos2.x
+    end )
+
+    local min_x = all_corners[ 1 ].x
+    local max_x = all_corners[ 8 ].x
 
     local pos = vector(
-        math.floor( top_screen.x - ( ( pos_screen.y - top_screen.y ) / 2 ) / 2 ),
-        top_screen.y
+        min_x, min_y
     )
 
     local size = vector(
-        math.floor( ( pos_screen.y - top_screen.y ) / 2 ),
-        pos_screen.y - top_screen.y
+        max_x - min_x, max_y - min_y
     )
 
     return pos, size
@@ -1066,11 +1118,15 @@ function options.new_combo( name, ... )
     combo.topmost = true
 
     function combo:get_config( )
-        return ( '[ \'%s\' ] = %s' ):format( self.name, self.selected )
+        return ( '[ \'%s\' ] = \'%s\'' ):format( self.name, self.items[ self.selected ] )
     end
 
     function combo:set_config( config_value )
-        self.selected = config_value
+        if type( config_value ) == 'number' then
+            self.selected = config_value
+        else
+            self.selected = table.find( self.items, config_value )
+        end
     end
 
     function combo:get( )
@@ -3540,274 +3596,294 @@ end )
 local function render_enemy_esp( )
     local lp = entities.GetLocalPlayer( )
 
-    local enemies = entities.FindByClass( 'CTFPlayer' )
-
-    if not enemies or not lp then
+    if not lp then
         return
     end
 
-    for _, ent in ipairs( enemies ) do
-        if ent ~= nil and ent:IsValid( ) and ent:IsAlive( ) and not ent:IsDormant( ) and ent:GetTeamNumber( ) ~= lp:GetTeamNumber( ) then
-            local box_start, box_size = get_2d_box_bounds( ent )
+    local our_origin = lp:GetAbsOrigin( )
+    local players = entities.FindByClass( 'CTFPlayer' )
 
-            local offsets = { 
-                [ new_top_area.id ] = vector( ),
-                [ new_left_area.id ] = vector( ),
-                [ new_bottom_area.id ] = vector( ),
-                [ new_right_area.id ] = vector( )
-            }
+    local enemies = { }
 
-            if not box_start or not box_size then goto next_ent end
+    for _, ent in ipairs( players ) do
 
-            if esp.box == 'rectangle' then
-                renderer.rect(
-                    box_start + vector( 1, 1 ),
-                    box_size - vector( 2, 2 ),
-                    color( 255 )
-                )
-            elseif esp.box == 'outline' then
-                renderer.rect(
-                    box_start + vector( 1, 0 ),
-                    box_size - vector( 2, 0 ),
-                    color( 0 )
-                )
+        get_2d_box_bounds( ent )
 
-                renderer.rect(
-                    box_start + vector( 2, 1 ),
-                    box_size - vector( 4, 2 ),
-                    color( 255 )
-                )
-
-                renderer.rect(
-                    box_start + vector( 3, 2 ),
-                    box_size - vector( 6, 4 ),
-                    color( 0 )
-                )
-            elseif esp.box == 'corners' then
-                local width = math.floor( box_size.x * 0.3 )
-                local height = width
-
-                -- ! please someone refactor this this looks horrible oh my god
-
-                -- top left
-                renderer.rect(
-                    box_start + vector( 1, 0 ),
-                    vector( 3, height ),
-                    color( 0 )
-                )
-
-                renderer.rect(
-                    box_start + vector( 1, 0 ),
-                    vector( width, 3 ),
-                    color( 0 )
-                )
-
-                renderer.line(
-                    box_start + vector( 2, 1 ),
-                    box_start + vector( width, 1 ),
-                    color( 255 )
-                )
-
-                renderer.line(
-                    box_start + vector( 2, 2 ),
-                    box_start + vector( 2, height - 1 ),
-                    color( 255 )
-                )
-
-                -- lower right
-                renderer.rect(
-                    box_start + box_size - vector( width, 3 ),
-                    vector( width, 3 ),
-                    color( 0 )
-                )
-
-                renderer.rect(
-                    box_start + box_size - vector( 3, height ),
-                    vector( 3, height ),
-                    color( 0 )
-                )
-
-                renderer.line(
-                    box_start + box_size - vector( width - 1, 2 ),
-                    box_start + box_size - vector( 1, 2 ),
-                    color( 255 )
-                )
-
-                renderer.line(
-                    box_start + box_size - vector( 2, height - 1 ),
-                    box_start + box_size - vector( 2, 1 ),
-                    color( 255 )
-                )
-
-                -- top right
-                renderer.rect(
-                    box_start + vector( box_size.x - width, 0 ),
-                    vector( width, 3 ),
-                    color( 0 )
-                )
-
-                renderer.rect(
-                    box_start + vector( box_size.x - 3, 0 ),
-                    vector( 3, height ),
-                    color( 0 )
-                )
-
-                renderer.line(
-                    box_start + vector( box_size.x - width + 1, 1 ),
-                    box_start + vector( box_size.x - 1, 1 ),
-                    color( 255 )
-                )
-
-                renderer.line(
-                    box_start + vector( box_size.x - 2, 2 ),
-                    box_start + vector( box_size.x - 2, height - 1 ),
-                    color( 255 )
-                )
-
-                -- bottom left
-                renderer.rect(
-                    box_start + vector( 1, box_size.y - height ),
-                    vector( 3, height ),
-                    color( 0 )
-                )
-
-                renderer.rect(
-                    box_start + vector( 1, box_size.y - 3 ),
-                    vector( width, 3 ),
-                    color( 0 )
-                )
-
-                renderer.line(
-                    box_start + vector( 2, box_size.y - height + 1 ),
-                    box_start + vector( 2, box_size.y - 1 ),
-                    color( 255 )
-                )
-
-                renderer.line(
-                    box_start + vector( 2, box_size.y - 2 ),
-                    box_start + vector( width, box_size.y - 2 ),
-                    color( 255 )
-                )
-            end
-
-            local idx_to_startpos = {
-                [ new_top_area.id ] = box_start,
-                [ new_left_area.id ] = box_start,
-                [ new_bottom_area.id ] = box_start + vector( 0, box_size.y ),
-                [ new_right_area.id ] = box_start + vector( box_size.x, 0 )
-            }
-
-            local given = box_size
-
-            local function get_box_size( area_id )
-                if area_id == new_left_area.id or area_id == new_right_area.id then
-                    local given_height = given.y
-                    
-                    return vector( math.floor( new_left_area.size.x / new_left_area.size.y * given_height ), given_height )
-                else
-                    return vector( given.x, math.floor( new_left_area.size.y / new_left_area.size.x * given.x ) )
-                end
-            end
-
-            local areas = {
-                new_bottom_area,
-                new_top_area,
-                new_left_area,
-                new_right_area
-            }
-
-            for area_idx = 1, #areas do
-                local area = areas[ area_idx ]
-
-                for slider_idx = 1, #area.slider_keys do
-                    local slider = area.sliders[ area.slider_keys[ slider_idx ] ]
-
-                    if not slider.parent then goto next_object end
-
-                    local start_pos = idx_to_startpos[ area.id ]
-                    local return_value = slider:callback( ent )
-
-                    if return_value ~= nil then
-                        local esp_area_box_size = get_box_size( area.id )
-
-                        local offset = vector( )
-
-                        if area.flow == docker_area_flow[ 'vertical' ] then
-                            offset.x = offsets[ area.id ].x
-
-                            if not area.inverted then
-                                offset.x = ( offset.x + slider.thickness ) * -1
-                            end
-                        else
-                            offset.y = offsets[ area.id ].y
-
-                            if not area.inverted then
-                                offset.y = offsets[ area.id ].y * -1 - slider.thickness
-                            end
-                        end
-
-                        slider:render_esp( return_value, offset, start_pos, esp_area_box_size )
-
-                        if area.flow == docker_area_flow[ 'vertical' ] then
-                            offsets[ area.id ].x = offsets[ area.id ].x + slider.thickness + area.slider_pad
-                        else
-                            offsets[ area.id ].y = offsets[ area.id ].y + slider.thickness + area.slider_pad
-                        end
-                    end
-
-                    ::next_object::
-                end
-
-                for text_idx = 1, #area.text_keys do
-                    local text = area.texts[ area.text_keys[ text_idx ] ]
-
-                    if not text.parent then goto next_object end
-
-                    local start_pos = idx_to_startpos[ area.id ]
-
-                    -- callback can change font context, we want to change the context for this one cycle only
-                    esp.set_font( preview_text_font )
-
-                    local return_value = text:callback( ent )
-
-                    renderer.use_font( esp.font )
-
-                    if return_value ~= nil then
-                        return_value = tostring( return_value ) -- just to be sure
-
-                        local esp_area_box_size = get_box_size( area.id )
-                        
-                        local text_sz = renderer.measure_text( return_value )
-                        local offset = vector( offsets[ area.id ].x, offsets[ area.id ].y )
-
-                        if area.flow == docker_area_flow[ 'vertical' ] then
-                            if not area.inverted then
-                                offset.x = ( offset.x + text_sz.x ) * -1
-                            end
-                        else
-                            offset.y = offsets[ area.id ].y
-
-                            offset.x = esp_area_box_size.x / 2 - text_sz.x / 2
-
-                            if not area.inverted then
-                                offset.y = ( offsets[ area.id ].y + text_sz.y - 5 ) * -1 
-                            end
-                        end
-
-                        offset.x = math.floor( offset.x )
-                        offset.y = math.floor( offset.y )
-
-                        text:render_esp( return_value, offset, start_pos, esp_area_box_size )
-
-                        offsets[ area.id ].y = offsets[ area.id ].y + text_sz.y - 3
-                    end
-
-                    ::next_object::
-                end
-            end
-
-            ::next_ent::
+        if ent:IsAlive( ) and not ent:IsDormant( ) and ent:GetTeamNumber( ) ~= lp:GetTeamNumber( ) then
+            table.insert( enemies, ent )
         end
+    end
+
+    -- sort enemies by dist
+    table.sort( enemies, function( ent1, ent2 )
+        local ent1_dist_from_us = ( ent1:GetAbsOrigin( ) - our_origin ):Length( )
+        local ent2_dist_from_us = ( ent2:GetAbsOrigin( ) - our_origin ):Length( )
+
+        return ent1_dist_from_us > ent2_dist_from_us
+    end )
+
+    for enm_idx = 1, #enemies do
+        local ent = enemies[ enm_idx ]
+
+        local box_start, box_size = get_2d_box_bounds( ent )
+
+        local offsets = { 
+            [ new_top_area.id ] = vector( ),
+            [ new_left_area.id ] = vector( ),
+            [ new_bottom_area.id ] = vector( ),
+            [ new_right_area.id ] = vector( )
+        }
+
+        if not box_start or not box_size then goto next_ent end
+
+        if esp.box == 'rectangle' then
+            renderer.rect(
+                box_start + vector( 1, 1 ),
+                box_size - vector( 2, 2 ),
+                color( 255 )
+            )
+        elseif esp.box == 'outline' then
+            renderer.rect(
+                box_start + vector( 1, 0 ),
+                box_size - vector( 2, 0 ),
+                color( 0 )
+            )
+
+            renderer.rect(
+                box_start + vector( 2, 1 ),
+                box_size - vector( 4, 2 ),
+                color( 255 )
+            )
+
+            renderer.rect(
+                box_start + vector( 3, 2 ),
+                box_size - vector( 6, 4 ),
+                color( 0 )
+            )
+        elseif esp.box == 'corners' then
+            local width = math.floor( box_size.x * 0.3 )
+            local height = width
+
+            -- ! please someone refactor this this looks horrible oh my god
+
+            -- top left
+            renderer.rect(
+                box_start + vector( 1, 0 ),
+                vector( 3, height ),
+                color( 0 )
+            )
+
+            renderer.rect(
+                box_start + vector( 1, 0 ),
+                vector( width, 3 ),
+                color( 0 )
+            )
+
+            renderer.line(
+                box_start + vector( 2, 1 ),
+                box_start + vector( width, 1 ),
+                color( 255 )
+            )
+
+            renderer.line(
+                box_start + vector( 2, 2 ),
+                box_start + vector( 2, height - 1 ),
+                color( 255 )
+            )
+
+            -- lower right
+            renderer.rect(
+                box_start + box_size - vector( width, 3 ),
+                vector( width, 3 ),
+                color( 0 )
+            )
+
+            renderer.rect(
+                box_start + box_size - vector( 3, height ),
+                vector( 3, height ),
+                color( 0 )
+            )
+
+            renderer.line(
+                box_start + box_size - vector( width - 1, 2 ),
+                box_start + box_size - vector( 1, 2 ),
+                color( 255 )
+            )
+
+            renderer.line(
+                box_start + box_size - vector( 2, height - 1 ),
+                box_start + box_size - vector( 2, 1 ),
+                color( 255 )
+            )
+
+            -- top right
+            renderer.rect(
+                box_start + vector( box_size.x - width, 0 ),
+                vector( width, 3 ),
+                color( 0 )
+            )
+
+            renderer.rect(
+                box_start + vector( box_size.x - 3, 0 ),
+                vector( 3, height ),
+                color( 0 )
+            )
+
+            renderer.line(
+                box_start + vector( box_size.x - width + 1, 1 ),
+                box_start + vector( box_size.x - 1, 1 ),
+                color( 255 )
+            )
+
+            renderer.line(
+                box_start + vector( box_size.x - 2, 2 ),
+                box_start + vector( box_size.x - 2, height - 1 ),
+                color( 255 )
+            )
+
+            -- bottom left
+            renderer.rect(
+                box_start + vector( 1, box_size.y - height ),
+                vector( 3, height ),
+                color( 0 )
+            )
+
+            renderer.rect(
+                box_start + vector( 1, box_size.y - 3 ),
+                vector( width, 3 ),
+                color( 0 )
+            )
+
+            renderer.line(
+                box_start + vector( 2, box_size.y - height + 1 ),
+                box_start + vector( 2, box_size.y - 1 ),
+                color( 255 )
+            )
+
+            renderer.line(
+                box_start + vector( 2, box_size.y - 2 ),
+                box_start + vector( width, box_size.y - 2 ),
+                color( 255 )
+            )
+        end
+
+        local idx_to_startpos = {
+            [ new_top_area.id ] = box_start,
+            [ new_left_area.id ] = box_start,
+            [ new_bottom_area.id ] = box_start + vector( 0, box_size.y ),
+            [ new_right_area.id ] = box_start + vector( box_size.x, 0 )
+        }
+
+        local given = box_size
+
+        local function get_box_size( area_id )
+            if area_id == new_left_area.id or area_id == new_right_area.id then
+                local given_height = given.y
+                
+                return vector( math.floor( new_left_area.size.x / new_left_area.size.y * given_height ), given_height )
+            else
+                return vector( given.x, math.floor( new_left_area.size.y / new_left_area.size.x * given.x ) )
+            end
+        end
+
+        local areas = {
+            new_bottom_area,
+            new_top_area,
+            new_left_area,
+            new_right_area
+        }
+
+        for area_idx = 1, #areas do
+            local area = areas[ area_idx ]
+
+            for slider_idx = 1, #area.slider_keys do
+                local slider = area.sliders[ area.slider_keys[ slider_idx ] ]
+
+                if not slider.parent then goto next_object end
+
+                local start_pos = idx_to_startpos[ area.id ]
+                local return_value = slider:callback( ent )
+
+                if return_value ~= nil then
+                    local esp_area_box_size = get_box_size( area.id )
+
+                    local offset = vector( )
+
+                    if area.flow == docker_area_flow[ 'vertical' ] then
+                        offset.x = offsets[ area.id ].x
+
+                        if not area.inverted then
+                            offset.x = ( offset.x + slider.thickness ) * -1
+                        end
+                    else
+                        offset.y = offsets[ area.id ].y
+
+                        if not area.inverted then
+                            offset.y = offsets[ area.id ].y * -1 - slider.thickness
+                        end
+                    end
+
+                    slider:render_esp( return_value, offset, start_pos, esp_area_box_size )
+
+                    if area.flow == docker_area_flow[ 'vertical' ] then
+                        offsets[ area.id ].x = offsets[ area.id ].x + slider.thickness + area.slider_pad
+                    else
+                        offsets[ area.id ].y = offsets[ area.id ].y + slider.thickness + area.slider_pad
+                    end
+                end
+
+                ::next_object::
+            end
+
+            for text_idx = 1, #area.text_keys do
+                local text = area.texts[ area.text_keys[ text_idx ] ]
+
+                if not text.parent then goto next_object end
+
+                local start_pos = idx_to_startpos[ area.id ]
+
+                -- callback can change font context, we want to change the context for this one cycle only
+                esp.set_font( preview_text_font )
+
+                local return_value = text:callback( ent )
+
+                renderer.use_font( esp.font )
+
+                if return_value ~= nil then
+                    return_value = tostring( return_value ) -- just to be sure
+
+                    local esp_area_box_size = get_box_size( area.id )
+                    
+                    local text_sz = renderer.measure_text( return_value )
+                    local offset = vector( offsets[ area.id ].x, offsets[ area.id ].y )
+
+                    if area.flow == docker_area_flow[ 'vertical' ] then
+                        if not area.inverted then
+                            offset.x = ( offset.x + text_sz.x ) * -1
+                        end
+                    else
+                        offset.y = offsets[ area.id ].y
+
+                        offset.x = esp_area_box_size.x / 2 - text_sz.x / 2
+
+                        if not area.inverted then
+                            offset.y = ( offsets[ area.id ].y + text_sz.y - 5 ) * -1 
+                        end
+                    end
+
+                    offset.x = math.floor( offset.x )
+                    offset.y = math.floor( offset.y )
+
+                    text:render_esp( return_value, offset, start_pos, esp_area_box_size )
+
+                    offsets[ area.id ].y = offsets[ area.id ].y + text_sz.y - 3
+                end
+
+                ::next_object::
+            end
+        end
+
+        ::next_ent::
     end
 end
 
@@ -3955,7 +4031,7 @@ local function draw_background( )
     local x, y = table.unpack( mouse )
     local mouse_pos = vector( x, y )
 
-    if ( in_bounds and is_mouse1_down ) and not dragging_camera and not dragging_id then
+    if ( in_bounds and is_mouse1_down ) and not dragging_camera and not dragging_id and not is_changing_view then
         dragging_camera = true
         camera_drag_difference = vector( camStartX, camStartY ) - mouse_pos
     end
