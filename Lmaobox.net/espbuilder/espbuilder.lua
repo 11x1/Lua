@@ -722,13 +722,17 @@ local verdana = renderer.create_font( 'Verdana', 10, 0, 'ao' )
 
 local esp = {
     box = nil,
-    font = preview_text_font
+    font = preview_text_font,
+    alpha_mod = 1
 }
 
 function esp.set_font( font )
     esp.font = font
 end
 
+function esp.set_alpha_modifier( mod )
+    esp.alpha_mod = mod
+end
 
 local function render_2d_box( box_start, box_size )
     if esp.box == 'rectangle' then
@@ -2206,9 +2210,12 @@ function docker.text( text, given_options, callback )
 
         renderer.use_font( esp.font )
 
+        local r, g, b, a = self.color:unpack( )
+        local render_color = color( r, g, b, math.floor( esp.alpha_mod * a ) )
+
         renderer.text(
             offset_pos,
-            self.color,
+            render_color,
             render_text
         )
     end
@@ -2531,35 +2538,43 @@ function docker.slider( text, given_options, callback )
 
         local true_height = box_size.y
         local height = math.floor( pc * box_size.y )
+
+        local r, g, b, a = self.background_color:unpack( )
+        local bg_render_color = color( r, g, b, math.floor( esp.alpha_mod * a ) )
+
+        r, g, b, a = self.color:unpack( )
+        local render_color = color( r, g, b, math.floor( ( esp.alpha_mod ^ 2 ) * a ) )
+
+        local default_alpha = math.floor( esp.alpha_mod ^ 0.5 * 255 )
     
         if flow == docker_area_flow[ 'vertical' ] then
             local healthbar_start = slider_start + vector( 0, true_height - height )
     
             renderer.rect_filled(
-                slider_start, vector( self.thickness, true_height ), self.background_color
+                slider_start, vector( self.thickness, true_height ), bg_render_color
             )
     
             renderer.rect_filled(
-                healthbar_start, vector( self.thickness, height ), self.color
+                healthbar_start + vector( 1, 1 ), vector( self.thickness - 2, height - 2 ), render_color
             )
     
             renderer.rect(
-                slider_start, vector( self.thickness, true_height ), color( 0 )
+                slider_start, vector( self.thickness, true_height ), color( 0, default_alpha )
             )
         else
             true_height = box_size.x
             height = math.floor( pc * box_size.x )
     
             renderer.rect_filled(
-                slider_start, vector( true_height, self.thickness ), self.background_color
+                slider_start, vector( true_height, self.thickness ), bg_render_color
             )
     
             renderer.rect_filled(
-                slider_start, vector( height, self.thickness ), self.color
+                slider_start + vector( 1, 1 ), vector( height - 1, self.thickness - 1 ), render_color
             )
     
             renderer.rect(
-                slider_start, vector( true_height, self.thickness ), color( 0 )
+                slider_start, vector( true_height, self.thickness ), color( 0, default_alpha )
             )
         end
     end
@@ -3593,6 +3608,11 @@ docker.text( 'covered', { options.new_combo( 'select font', 'pixel', 'arial', 'v
     return nil
 end )
 
+local dormant_esp = {
+    stay = 4,
+    fade = 1,
+    opacity = 0.5
+}
 local function render_enemy_esp( )
     local lp = entities.GetLocalPlayer( )
 
@@ -3609,10 +3629,14 @@ local function render_enemy_esp( )
 
         get_2d_box_bounds( ent )
 
-        if ent:IsAlive( ) and not ent:IsDormant( ) and ent:GetTeamNumber( ) ~= lp:GetTeamNumber( ) then
+        if ent:IsAlive( ) and ent:GetTeamNumber( ) ~= lp:GetTeamNumber( ) then
             table.insert( enemies, ent )
         end
     end
+
+    if #enemies == 0 then return end
+
+    local current_time = globals.CurTime( )
 
     -- sort enemies by dist
     table.sort( enemies, function( ent1, ent2 )
@@ -3624,6 +3648,40 @@ local function render_enemy_esp( )
 
     for enm_idx = 1, #enemies do
         local ent = enemies[ enm_idx ]
+
+        local should_render = true
+
+        esp.set_alpha_modifier( 1 )
+
+        if ent:IsDormant( ) then
+            local sim_time_diff = current_time - ent:GetPropFloat( 'm_flSimulationTime' )
+
+            local alpha_modulation = dormant_esp.opacity
+
+            if sim_time_diff < dormant_esp.fade then
+                local fade_pc = sim_time_diff / dormant_esp.fade
+
+                local subtract_alpha = fade_pc * dormant_esp.opacity
+
+                alpha_modulation = 1 - subtract_alpha
+            elseif sim_time_diff > dormant_esp.stay - dormant_esp.fade then
+                if sim_time_diff > dormant_esp.stay then
+                    should_render = false
+                else
+                    local fade_pc = ( sim_time_diff - ( dormant_esp.stay - dormant_esp.fade ) ) / dormant_esp.fade
+
+                    local subtract_alpha = fade_pc * dormant_esp.opacity
+
+                    alpha_modulation = dormant_esp.opacity - subtract_alpha
+                end
+            end
+
+            esp.set_alpha_modifier( alpha_modulation )
+        end
+
+        if not should_render then goto next_ent end
+
+        local alpha_default = esp.alpha_mod * 255
 
         local box_start, box_size = get_2d_box_bounds( ent )
 
@@ -3640,25 +3698,25 @@ local function render_enemy_esp( )
             renderer.rect(
                 box_start + vector( 1, 1 ),
                 box_size - vector( 2, 2 ),
-                color( 255 )
+                color( alpha_default )
             )
         elseif esp.box == 'outline' then
             renderer.rect(
                 box_start + vector( 1, 0 ),
                 box_size - vector( 2, 0 ),
-                color( 0 )
+                color( 0, alpha_default )
             )
 
             renderer.rect(
                 box_start + vector( 2, 1 ),
                 box_size - vector( 4, 2 ),
-                color( 255 )
+                color( 255, alpha_default )
             )
 
             renderer.rect(
                 box_start + vector( 3, 2 ),
                 box_size - vector( 6, 4 ),
-                color( 0 )
+                color( 0, alpha_default )
             )
         elseif esp.box == 'corners' then
             local width = math.floor( box_size.x * 0.3 )
@@ -3670,100 +3728,100 @@ local function render_enemy_esp( )
             renderer.rect(
                 box_start + vector( 1, 0 ),
                 vector( 3, height ),
-                color( 0 )
+                color( 0, alpha_default )
             )
 
             renderer.rect(
                 box_start + vector( 1, 0 ),
                 vector( width, 3 ),
-                color( 0 )
+                color( 0, alpha_default )
             )
 
             renderer.line(
                 box_start + vector( 2, 1 ),
                 box_start + vector( width, 1 ),
-                color( 255 )
+                color( 255, alpha_default )
             )
 
             renderer.line(
                 box_start + vector( 2, 2 ),
                 box_start + vector( 2, height - 1 ),
-                color( 255 )
+                color( 255, alpha_default )
             )
 
             -- lower right
             renderer.rect(
                 box_start + box_size - vector( width, 3 ),
                 vector( width, 3 ),
-                color( 0 )
+                color( 0, alpha_default )
             )
 
             renderer.rect(
                 box_start + box_size - vector( 3, height ),
                 vector( 3, height ),
-                color( 0 )
+                color( 0, alpha_default )
             )
 
             renderer.line(
                 box_start + box_size - vector( width - 1, 2 ),
                 box_start + box_size - vector( 1, 2 ),
-                color( 255 )
+                color( 255, alpha_default )
             )
 
             renderer.line(
                 box_start + box_size - vector( 2, height - 1 ),
                 box_start + box_size - vector( 2, 1 ),
-                color( 255 )
+                color( 255, alpha_default )
             )
 
             -- top right
             renderer.rect(
                 box_start + vector( box_size.x - width, 0 ),
                 vector( width, 3 ),
-                color( 0 )
+                color( 0, alpha_default )
             )
 
             renderer.rect(
                 box_start + vector( box_size.x - 3, 0 ),
                 vector( 3, height ),
-                color( 0 )
+                color( 0, alpha_default )
             )
 
             renderer.line(
                 box_start + vector( box_size.x - width + 1, 1 ),
                 box_start + vector( box_size.x - 1, 1 ),
-                color( 255 )
+                color( 255, alpha_default )
             )
 
             renderer.line(
                 box_start + vector( box_size.x - 2, 2 ),
                 box_start + vector( box_size.x - 2, height - 1 ),
-                color( 255 )
+                color( 255, alpha_default )
             )
 
             -- bottom left
             renderer.rect(
                 box_start + vector( 1, box_size.y - height ),
                 vector( 3, height ),
-                color( 0 )
+                color( 0, alpha_default )
             )
 
             renderer.rect(
                 box_start + vector( 1, box_size.y - 3 ),
                 vector( width, 3 ),
-                color( 0 )
+                color( 0, alpha_default )
             )
 
             renderer.line(
                 box_start + vector( 2, box_size.y - height + 1 ),
                 box_start + vector( 2, box_size.y - 1 ),
-                color( 255 )
+                color( 255, alpha_default )
             )
 
             renderer.line(
                 box_start + vector( 2, box_size.y - 2 ),
                 box_start + vector( width, box_size.y - 2 ),
-                color( 255 )
+                color( 255, alpha_default )
             )
         end
 
