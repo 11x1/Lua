@@ -579,6 +579,7 @@ local menu_opened = true
 
 local myEnt = nil
 local model_spin = vector( 0, 0, 0 )
+local model_sequence = 3
 
 callbacks.Unregister( "CreateMove", "mycreate" )
 callbacks.Register( "CreateMove", "mycreate", function( cmd )
@@ -589,10 +590,13 @@ callbacks.Register( "CreateMove", "mycreate", function( cmd )
     end
 
     if not myEnt then 
-        myEnt = entities.CreateEntityByName( "grenade" )
-        myEnt:SetModel( "models/player/demo.mdl" )
+        myEnt = entities.CreateEntityByName( "player" )
         myEnt:SetAbsOrigin( Vector3( 50, 50, 500 ) )
         myEnt:SetPropInt( 42, 'm_iTeamNum' )
+
+        print( 'created' )
+    else
+        myEnt:SetPropInt( model_sequence, 'm_nSequence' )
     end
 end )
 
@@ -648,7 +652,7 @@ local function get_camera( cv, offset_vector )
 end
 
 callbacks.Register("PostRenderView", function(view)
-    if not myEnt or not menu_opened then return end
+    if myEnt == nil or not menu_opened then return end
 
     local scr_w, scr_h = draw.GetScreenSize( )
 
@@ -660,11 +664,15 @@ callbacks.Register("PostRenderView", function(view)
     
     customView.fov = 30
     customView.aspectRatio = aspect_ratio
-    customView.zFar = 170
-    customView.zNear = 120
-    
+    customView.zFar = 180
+    customView.zNear = 1
+
+    -- push our custom view ontop of the stack, on the cameraTexture mat
     render.Push3DView( customView, E_ClearFlags.VIEW_CLEAR_COLOR | E_ClearFlags.VIEW_CLEAR_DEPTH, cameraTexture )
+
+    -- we can disable skybox rendering to save a tiny amount of fps
     render.ViewDrawScene( false, false, customView )
+
     render.PopView( )
 
     our_view = customView
@@ -3170,7 +3178,10 @@ local selected_mat_data = {
     backtrack_end = nil
 }
 
+local cached_model = nil
+
 local model_options_menu = options_menu.new({ 
+    options.new_combo( 'preview model', 'scout', 'soldier', 'pyro', 'demoman', 'heavy', 'engineer', 'medic', 'sniper', 'spy' ),
     options.new_combo( 'box style', 'none', 'rectangle', 'outline', 'corners' ),
     options.new_checkbox( 'override material', false ),
     options.new_checkbox( 'wireframe', false ),
@@ -3181,8 +3192,38 @@ local model_options_menu = options_menu.new({
     options.new_colorpicker( 'backtrack end', color( '6d1537' ) ),
 })
 
+local model_opt_name_to_modelname = { -- i could do 'models/player/%s.mdl':format aswell but demoman is very important in the model options
+    [ 'scout' ] = 'models/player/scout.mdl',
+    [ 'soldier' ] = 'models/player/soldier.mdl',
+    [ 'pyro' ] = 'models/player/pyro.mdl',
+    [ 'demoman' ] = 'models/player/demo.mdl',
+    [ 'heavy' ] = 'models/player/heavy.mdl',
+    [ 'engineer' ] = 'models/player/engineer.mdl',
+    [ 'medic' ] = 'models/player/medic.mdl',
+    [ 'sniper' ] = 'models/player/sniper.mdl',
+    [ 'spy' ] = 'models/player/spy.mdl'
+}
+
 local function model_options_callback( )
     local self = model_options_menu
+
+    local model_opt = self:get_option( 'preview model' )
+
+    local _, model_name = model_opt:get( )
+    if myEnt then
+        local mdl_name = model_opt_name_to_modelname[ model_name ]
+
+        if mdl_name ~= cached_model then
+            myEnt:SetModel( mdl_name )
+            cached_model = mdl_name
+
+            if mdl_name == 'spy' then
+                model_sequence = 12
+            else
+                model_sequence = 3
+            end
+        end
+    end
 
     local box_style_opt = self:get_option( 'box style' )
 
@@ -3973,7 +4014,6 @@ local function draw_preview_esp( ent )
 end
 
 -- try chams
-local myEntModelName = nil
 local drawn_entities = { }
 
 local function dist_to_color( dist, color_1, color_2 )
@@ -4023,7 +4063,7 @@ local function onDrawModel( drawModelContext )
             end
         end
     else
-        if drawModelContext:GetModelName( ) ~= myEntModelName then return end
+        if drawModelContext:GetModelName( ) ~= cached_model then return end
     end
 
     local r, g, b, a = selected_mat_data.color_override:unpack( )
@@ -4116,6 +4156,39 @@ end
 callbacks.Register("Draw", function( )
     drawn_entities= { }
 
+    -- not connected
+    if myEnt and engine.GetMapName( ) == '' then
+        print( 'deleted' )
+        myEnt:Release( )
+        myEnt = nil
+    end
+
+    -- local lp = entities.GetLocalPlayer( )
+    -- if lp then
+    --     local tbl = lp:EntitySpaceHitboxSurroundingBox( )
+
+    --     local mins, maxs = tbl[ 1 ], tbl[ 2 ]
+
+    --     mins = lp:GetAbsOrigin( ) + mins
+
+    --     local all_corners = {
+    --         mins,
+    --         mins + Vector3( maxs.x, 0, 0 ),
+    --         mins + Vector3( maxs.x, maxs.y, 0 ),
+    --         mins + Vector3( 0, maxs.y, 0 ),
+    --         mins + Vector3( 0, maxs.y, maxs.z ),
+    --         mins + maxs,
+    --         mins + Vector3( maxs.x, 0, maxs.z ),
+    --         mins + Vector3( 0, 0, maxs.z ),
+    --     }
+
+    --     for i = 1, #all_corners do
+    --         for j = i + 1, #all_corners do
+    --             renderer.line3d( all_corners[ i ], all_corners[ j ], color( 255 ) )
+    --         end
+    --     end
+    -- end
+
     local scr_w, scr_h = draw.GetScreenSize( )
     camW = math.floor( camH / scr_w * scr_h )
 
@@ -4127,30 +4200,19 @@ callbacks.Register("Draw", function( )
 
     input.update_keys( )
 
-    if myEnt then
-        if not myEntModelName then
-            myEntModelName = models.GetModelName( myEnt:GetModel( ) )
-        end
-    end
-
     if input.is_button_pressed( KEY_INSERT ) then
         menu_opened = not menu_opened
 
-        if not menu_opened and myEnt then
-            myEnt:Release( )
-            myEnt = nil
-
-            if open_menu then
-                open_menu.open = false
-                open_menu = nil     
-            end
+        if not menu_opened and myEnt and open_menu then
+            open_menu.open = false
+            open_menu = nil     
         end
     end
 
     if menu_opened then
         draw_background( )
 
-        if myEnt then
+        if myEnt ~= nil then
             render.DrawScreenSpaceRectangle( cameraMaterial, camStartX, camStartY, camW, camH, 0, 0, camW, camH, camW, camH )
         end
 
