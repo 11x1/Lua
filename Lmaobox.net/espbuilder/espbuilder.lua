@@ -1,8 +1,40 @@
--- Wrappers for everything because this api feels like neverlose's on release
--- I just cant handle the camelcase sorry xx
+-- Configs autosave on script unload, autosaving soon:tm:
 
--- unload script and check console for the config
-local config_table = { [ 'name' ] = { [ 'include entity index' ] = false, [ 'select font' ] = 'pixel', [ 'text color' ] = { 200, 200, 200, 255 }, [ 'area_id' ] = '1' }, [ 'health' ] = { [ 'select font' ] = 'pixel', [ 'text color' ] = { 100, 255, 100, 255 }, [ 'hide on full' ] = true, [ 'area_id' ] = '2' }, [ 'overheal' ] = { [ 'select font' ] = 'pixel', [ 'text color' ] = { 237, 233, 157, 255 }, [ 'area_id' ] = '4' }, [ 'scoped' ] = { [ 'select font' ] = 'pixel', [ 'text color' ] = { 50, 200, 152, 255 }, [ 'area_id' ] = '4' }, [ 'ubercharged' ] = { [ 'select font' ] = 'pixel', [ 'text color' ] = { 255, 100, 100, 255 }, [ 'area_id' ] = '4' }, [ 'cloaked' ] = { [ 'select font' ] = 'pixel', [ 'text color' ] = { 150, 100, 255, 255 }, [ 'area_id' ] = '4' }, [ 'bonk' ] = { [ 'select font' ] = 'pixel', [ 'text color' ] = { 255, 255, 0, 255 }, [ 'area_id' ] = '4' }, [ 'distance' ] = { [ 'select font' ] = 'pixel', [ 'text color' ] = { 178, 178, 178, 255 }, [ 'area_id' ] = '3' }, [ 'charging' ] = { [ 'select font' ] = 'pixel', [ 'text color' ] = { 255, 0, 0, 255 }, [ 'area_id' ] = '4' }, [ 'covered' ] = { [ 'select font' ] = 'pixel', [ 'jarate' ] = { 255, 215, 0, 255 }, [ 'milk' ] = { 255, 255, 255, 255 }, [ 'both' ] = { 230, 80, 140, 255 }, [ 'area_id' ] = '4' }, [ 'model_options_menu' ] = { [ 'box style' ] = 'none', [ 'override material' ] = true, [ 'wireframe' ] = false, [ 'chams' ] = 'flat', [ 'chams color' ] = { 50, 91, 117, 255 }, [ 'backtrack modulation' ] = true, [ 'backtrack start' ] = { 0, 67, 110, 255 }, [ 'backtrack end' ] = { 109, 21, 55, 255 } }, [ 'health' ] = { [ 'bar color' ] = { 0, 255, 0, 255 },[ 'area_id' ] = '2',[ 'thickness' ] = 5 } }
+-- Wrappers for everything because this api feels like neverlose's on release
+-- I just cant handle the camelcase sorry xx (sometimes its ok)
+
+-- http://dkolf.de/src/dkjson-lua.fsl/home
+-- https://mothereff.in/lua-minifier
+-- Thank you lnx00 for suggesting me json and enlightening me on the existence of the io library
+local dkjson = ( function( ) local a=false;local b=false;local c='json'local pairs,type,tostring,tonumber,getmetatable,setmetatable,rawset=pairs,type,tostring,tonumber,getmetatable,setmetatable,rawset;local error,require,pcall,select=error,require,pcall,select;local d,e=math.floor,math.huge;local f,g,h,i,j,k,l,m=string.rep,string.gsub,string.sub,string.byte,string.char,string.find,string.len,string.format;local n=string.match;local o=table.concat;local p={version="dkjson 2.6"}local q={}if b then if a then _G[c]=q else _G[c]=p end end;local r=nil;pcall(function()local s=require"debug".getmetatable;if s then getmetatable=s end end)p.null=setmetatable({},{__tojson=function()return"null"end})local function t(u)local v,w,x=0,0,0;for y,z in pairs(u)do if y=='n'and type(z)=='number'then x=z;if z>v then v=z end else if type(y)~='number'or y<1 or d(y)~=y then return false end;if y>v then v=y end;w=w+1 end end;if v>10 and v>x and v>w*2 then return false end;return true,v end;local A={["\""]="\\\"",["\\"]="\\\\",["\b"]="\\b",["\f"]="\\f",["\n"]="\\n",["\r"]="\\r",["\t"]="\\t"}local function B(C)local D=A[C]if D then return D end;local E,F,G,H=i(C,1,4)E,F,G,H=E or 0,F or 0,G or 0,H or 0;if E<=0x7f then D=E elseif 0xc0<=E and E<=0xdf and F>=0x80 then D=(E-0xc0)*0x40+F-0x80 elseif 0xe0<=E and E<=0xef and F>=0x80 and G>=0x80 then D=((E-0xe0)*0x40+F-0x80)*0x40+G-0x80 elseif 0xf0<=E and E<=0xf7 and F>=0x80 and G>=0x80 and H>=0x80 then D=(((E-0xf0)*0x40+F-0x80)*0x40+G-0x80)*0x40+H-0x80 else return""end;if D<=0xffff then return m("\\u%.4x",D)elseif D<=0x10ffff then D=D-0x10000;local I,J=0xD800+d(D/0x400),0xDC00+D%0x400;return m("\\u%.4x\\u%.4x",I,J)else return""end end;local function K(L,M,N)if k(L,M)then return g(L,M,N)else return L end end;local function O(D)D=K(D,"[%z\1-\31\"\\\127]",B)if k(D,"[\194\216\220\225\226\239]")then D=K(D,"\194[\128-\159\173]",B)D=K(D,"\216[\128-\132]",B)D=K(D,"\220\143",B)D=K(D,"\225\158[\180\181]",B)D=K(D,"\226\128[\140-\143\168-\175]",B)D=K(D,"\226\129[\160-\175]",B)D=K(D,"\239\187\191",B)D=K(D,"\239\191[\176-\191]",B)end;return"\""..D.."\""end;p.quotestring=O;local function P(L,Q,w)local R,S=k(L,Q,1,true)if R then return h(L,1,R-1)..w..h(L,S+1,-1)else return L end end;local T,U;local function V()T=n(tostring(0.5),"([^05+])")U="[^0-9%-%+eE"..g(T,"[%^%$%(%)%%%.%[%]%*%+%-%?]","%%%0").."]+"end;V()local function W(X)return P(K(tostring(X),U,""),T,".")end;local function Y(L)local X=tonumber(P(L,".",T))if not X then V()X=tonumber(P(L,".",T))end;return X end;local function Z(_,a0,a1)a0[a1+1]="\n"a0[a1+2]=f("  ",_)a1=a1+2;return a1 end;function p.addnewline(a2)if a2.indent then a2.bufferlen=Z(a2.level or 0,a2.buffer,a2.bufferlen or#a2.buffer)end end;local a3;local function a4(a5,D,a6,a7,_,a0,a1,a8,a9,a2)local aa=type(a5)if aa~='string'and aa~='number'then return nil,"type '"..aa.."' is not supported as a key by JSON."end;if a6 then a1=a1+1;a0[a1]=","end;if a7 then a1=Z(_,a0,a1)end;a0[a1+1]=O(a5)a0[a1+2]=":"return a3(D,a7,_,a0,a1+2,a8,a9,a2)end;local function ab(ac,a0,a2)local a1=a2.bufferlen;if type(ac)=='string'then a1=a1+1;a0[a1]=ac end;return a1 end;local function ad(ae,D,a2,a0,a1,af)af=af or ae;local ag=a2.exception;if not ag then return nil,af else a2.bufferlen=a1;local ah,ai=ag(ae,D,a2,af)if not ah then return nil,ai or af end;return ab(ah,a0,a2)end end;function p.encodeexception(ae,D,a2,af)return O("<"..af..">")end;a3=function(D,a7,_,a0,a1,a8,a9,a2)local aj=type(D)local ak=getmetatable(D)ak=type(ak)=='table'and ak;local al=ak and ak.__tojson;if al then if a8[D]then return ad('reference cycle',D,a2,a0,a1)end;a8[D]=true;a2.bufferlen=a1;local ah,ai=al(D,a2)if not ah then return ad('custom encoder failed',D,a2,a0,a1,ai)end;a8[D]=nil;a1=ab(ah,a0,a2)elseif D==nil then a1=a1+1;a0[a1]="null"elseif aj=='number'then local am;if D~=D or D>=e or-D>=e then am="null"else am=W(D)end;a1=a1+1;a0[a1]=am elseif aj=='boolean'then a1=a1+1;a0[a1]=D and"true"or"false"elseif aj=='string'then a1=a1+1;a0[a1]=O(D)elseif aj=='table'then if a8[D]then return ad('reference cycle',D,a2,a0,a1)end;a8[D]=true;_=_+1;local an,w=t(D)if w==0 and ak and ak.__jsontype=='object'then an=false end;local ai;if an then a1=a1+1;a0[a1]="["for R=1,w do a1,ai=a3(D[R],a7,_,a0,a1,a8,a9,a2)if not a1 then return nil,ai end;if R<w then a1=a1+1;a0[a1]=","end end;a1=a1+1;a0[a1]="]"else local a6=false;a1=a1+1;a0[a1]="{"local ao=ak and ak.__jsonorder or a9;if ao then local ap={}w=#ao;for R=1,w do local y=ao[R]local z=D[y]if z~=nil then ap[y]=true;a1,ai=a4(y,z,a6,a7,_,a0,a1,a8,a9,a2)a6=true end end;for y,z in pairs(D)do if not ap[y]then a1,ai=a4(y,z,a6,a7,_,a0,a1,a8,a9,a2)if not a1 then return nil,ai end;a6=true end end else for y,z in pairs(D)do a1,ai=a4(y,z,a6,a7,_,a0,a1,a8,a9,a2)if not a1 then return nil,ai end;a6=true end end;if a7 then a1=Z(_-1,a0,a1)end;a1=a1+1;a0[a1]="}"end;a8[D]=nil else return ad('unsupported type',D,a2,a0,a1,"type '"..aj.."' is not supported by JSON.")end;return a1 end;function p.encode(D,a2)a2=a2 or{}local aq=a2.buffer;local a0=aq or{}a2.buffer=a0;V()local ah,ai=a3(D,a2.indent,a2.level or 0,a0,a2.bufferlen or 0,a2.tables or{},a2.keyorder,a2)if not ah then error(ai,2)elseif aq==a0 then a2.bufferlen=ah;return true else a2.bufferlen=nil;a2.buffer=nil;return o(a0)end end;local function ar(L,as)local at,au,av=1,1,0;while true do au=k(L,"\n",au,true)if au and au<as then at=at+1;av=au;au=au+1 else break end end;return"line "..at..", column "..as-av end;local function aw(L,ax,as)return nil,l(L)+1,"unterminated "..ax.." at "..ar(L,as)end;local function ay(L,au)while true do au=k(L,"%S",au)if not au then return nil end;local az=h(L,au,au+1)if az=="\239\187"and h(L,au+2,au+2)=="\191"then au=au+3 elseif az=="//"then au=k(L,"[\n\r]",au+2)if not au then return nil end elseif az=="/*"then au=k(L,"*/",au+2)if not au then return nil end;au=au+2 else return au end end end;local aA={["\""]="\"",["\\"]="\\",["/"]="/",["b"]="\b",["f"]="\f",["n"]="\n",["r"]="\r",["t"]="\t"}local function aB(D)if D<0 then return nil elseif D<=0x007f then return j(D)elseif D<=0x07ff then return j(0xc0+d(D/0x40),0x80+d(D)%0x40)elseif D<=0xffff then return j(0xe0+d(D/0x1000),0x80+d(D/0x40)%0x40,0x80+d(D)%0x40)elseif D<=0x10ffff then return j(0xf0+d(D/0x40000),0x80+d(D/0x1000)%0x40,0x80+d(D/0x40)%0x40,0x80+d(D)%0x40)else return nil end end;local function aC(L,au)local aD=au+1;local a0,w={},0;while true do local aE=k(L,"[\"\\]",aD)if not aE then return aw(L,"string",au)end;if aE>aD then w=w+1;a0[w]=h(L,aD,aE-1)end;if h(L,aE,aE)=="\""then aD=aE+1;break else local aF=h(L,aE+1,aE+1)local D;if aF=="u"then D=tonumber(h(L,aE+2,aE+5),16)if D then local aG;if 0xD800<=D and D<=0xDBff then if h(L,aE+6,aE+7)=="\\u"then aG=tonumber(h(L,aE+8,aE+11),16)if aG and 0xDC00<=aG and aG<=0xDFFF then D=(D-0xD800)*0x400+aG-0xDC00+0x10000 else aG=nil end end end;D=D and aB(D)if D then if aG then aD=aE+12 else aD=aE+6 end end end end;if not D then D=aA[aF]or aF;aD=aE+2 end;w=w+1;a0[w]=D end end;if w==1 then return a0[1],aD elseif w>1 then return o(a0),aD else return"",aD end end;local aH;local function aI(ax,aJ,L,aK,aL,aM,aN)local aO=l(L)local u,w={},0;local au=aK+1;if ax=='object'then setmetatable(u,aM)else setmetatable(u,aN)end;while true do au=ay(L,au)if not au then return aw(L,ax,aK)end;local aP=h(L,au,au)if aP==aJ then return u,au+1 end;local aQ,aR;aQ,au,aR=aH(L,au,aL,aM,aN)if aR then return nil,au,aR end;au=ay(L,au)if not au then return aw(L,ax,aK)end;aP=h(L,au,au)if aP==":"then if aQ==nil then return nil,au,"cannot use nil as table index (at "..ar(L,au)..")"end;au=ay(L,au+1)if not au then return aw(L,ax,aK)end;local aS;aS,au,aR=aH(L,au,aL,aM,aN)if aR then return nil,au,aR end;u[aQ]=aS;au=ay(L,au)if not au then return aw(L,ax,aK)end;aP=h(L,au,au)else w=w+1;u[w]=aQ end;if aP==","then au=au+1 end end end;aH=function(L,au,aL,aM,aN)au=au or 1;au=ay(L,au)if not au then return nil,l(L)+1,"no valid JSON value (reached the end)"end;local aP=h(L,au,au)if aP=="{"then return aI('object',"}",L,au,aL,aM,aN)elseif aP=="["then return aI('array',"]",L,au,aL,aM,aN)elseif aP=="\""then return aC(L,au)else local aT,aU=k(L,"^%-?[%d%.]+[eE]?[%+%-]?%d*",au)if aT then local aV=Y(h(L,aT,aU))if aV then return aV,aU+1 end end;aT,aU=k(L,"^%a%w*",au)if aT then local aW=h(L,aT,aU)if aW=="true"then return true,aU+1 elseif aW=="false"then return false,aU+1 elseif aW=="null"then return aL,aU+1 end end;return nil,au,"no valid JSON value at "..ar(L,au)end end;local function aX(...)if select("#",...)>0 then return...else return{__jsontype='object'},{__jsontype='array'}end end;function p.decode(L,au,aL,...)local aM,aN=aX(...)return aH(L,au,aL,aM,aN)end;function p.use_lpeg()local aY=require("lpeg")if aY.version()=="0.11"then error"due to a bug in LPeg 0.11, it cannot be used for JSON matching"end;local aZ=aY.match;local a_,b0,b1=aY.P,aY.S,aY.R;local function b2(L,au,ai,a2)if not a2.msg then a2.msg=ai.." at "..ar(L,au)a2.pos=au end;return false end;local function b3(ai)return aY.Cmt(aY.Cc(ai)*aY.Carg(2),b2)end;local function b4(L,au,ax,a2)return b2(L,au-1,"unterminated "..ax,a2)end;local b5=a_"//"*(1-b0"\n\r")^0;local b6=a_"/*"*(1-a_"*/")^0*a_"*/"local b7=(b0" \n\r\t"+a_"\239\187\191"+b5+b6)^0;local function b8(ax)return aY.Cmt(aY.Cc(ax)*aY.Carg(2),b4)end;local b9=1-b0"\"\\\n\r"local ba=a_"\\"*aY.C(b0"\"\\/bfnrt"+b3"unsupported escape sequence")/aA;local bb=b1("09","af","AF")local function bc(bd,au,be,bf)be,bf=tonumber(be,16),tonumber(bf,16)if 0xD800<=be and be<=0xDBff and 0xDC00<=bf and bf<=0xDFFF then return true,aB((be-0xD800)*0x400+bf-0xDC00+0x10000)else return false end end;local function bg(bh)return aB(tonumber(bh,16))end;local bi=a_"\\u"*aY.C(bb*bb*bb*bb)local bj=aY.Cmt(bi*bi,bc)+bi/bg;local bk=bj+ba+b9;local bl=a_"\""*(aY.Cs(bk^0)*a_"\""+b8"string")local bm=a_"-"^-1*(a_"0"+b1"19"*b1"09"^0)local bn=a_"."*b1"09"^0;local bo=b0"eE"*b0"+-"^-1*b1"09"^1;local bp=bm*bn^-1*bo^-1/Y;local bq=a_"true"*aY.Cc(true)+a_"false"*aY.Cc(false)+a_"null"*aY.Carg(1)local br=bp+bl+bq;local bs,bt;local function bu(L,au,aL,a2)local bv,bw;local bx=au;local by;local bz,bA={},0;repeat bv,bw,by=aZ(bs,L,au,aL,a2)if bw=='end'then return b4(L,bx,"array",a2)end;au=by;if bw=='cont'or bw=='last'then bA=bA+1;bz[bA]=bv end until bw~='cont'return au,setmetatable(bz,a2.arraymeta)end;local function bB(L,au,aL,a2)local bv,a5,bw;local bx=au;local by;local bz={}repeat a5,bv,bw,by=aZ(bt,L,au,aL,a2)if bw=='end'then return b4(L,bx,"object",a2)end;au=by;if bw=='cont'or bw=='last'then bz[a5]=bv end until bw~='cont'return au,setmetatable(bz,a2.objectmeta)end;local bC=a_"["*aY.Cmt(aY.Carg(1)*aY.Carg(2),bu)local bD=a_"{"*aY.Cmt(aY.Carg(1)*aY.Carg(2),bB)local bE=b7*(bC+bD+br)local bF=bE+b7*b3"value expected"local bG=bl+b3"key expected"local bH=a_(-1)*aY.Cc'end'local bI=b3"invalid JSON"bs=(bE*b7*(a_","*aY.Cc'cont'+a_"]"*aY.Cc'last'+bH+bI)+aY.Cc(nil)*(a_"]"*aY.Cc'empty'+bH+bI))*aY.Cp()local bJ=aY.Cg(b7*bG*b7*(a_":"+b3"colon expected")*bF)bt=(aY.Cc(nil)*aY.Cc(nil)*a_"}"*aY.Cc'empty'+bH+bJ*b7*(a_","*aY.Cc'cont'+a_"}"*aY.Cc'last'+bH+bI)+bI)*aY.Cp()local bK=bF*aY.Cp()q.version=p.version;q.encode=p.encode;q.null=p.null;q.quotestring=p.quotestring;q.addnewline=p.addnewline;q.encodeexception=p.encodeexception;q.using_lpeg=true;function q.decode(L,au,aL,...)local a2={}a2.objectmeta,a2.arraymeta=aX(...)local bv,bL=aZ(bK,L,au,aL,a2)if a2.msg then return nil,a2.pos,a2.msg else return bv,bL end end;p.use_lpeg=function()return q end;q.use_lpeg=p.use_lpeg;return q end;if a then return p.use_lpeg()end;return p end)( )
+
+local success, abs_cfg_folder_path = filesystem.CreateDirectory( 'esp_builder' )
+
+if not success and not abs_cfg_folder_path then
+    error( '[fatal error] couldn\'t create config folder.' )
+end
+
+local config_file_path = ( '%s\\esp_config_data.json' ):format( abs_cfg_folder_path )
+
+local config_file = io.open(
+    config_file_path,
+    'r'
+)
+
+local config_table = nil
+if config_file then
+    io.input( config_file )
+
+    local config_data = io.read( )
+    
+    local ok, res = pcall( dkjson.decode, config_data, 1, nil )
+
+    if not ok then
+        print( ( '[config error] failed parsing config. Error: %s' ):format( res ) )
+    else
+        config_table = res
+    end
+end
 
 local vector = { }
 local vector_mt = { }
@@ -116,7 +148,7 @@ local function parse_hex_string( hex_string )
 end
 
 function color_mt.unpack( self )
-    return self.r, self.g, self.b, self.a
+    return math.floor( self.r ), math.floor( self.g ), math.floor( self.b ), math.floor( self.a )
 end
 
 function color.new( r, g, b, a )
@@ -1017,7 +1049,7 @@ function options.new_checkbox( name, default_value )
     end
 
     function checkbox:get_config( )
-        return ( '[ \'%s\' ] = %s' ):format( self.name, self.state )
+        return self.state
     end
 
     function checkbox:set_config( config_value )
@@ -1130,7 +1162,7 @@ function options.new_combo( name, ... )
     combo.topmost = true
 
     function combo:get_config( )
-        return ( '[ \'%s\' ] = \'%s\'' ):format( self.name, self.items[ self.selected ] )
+        return self.items[ self.selected ]
     end
 
     function combo:set_config( config_value )
@@ -1376,7 +1408,7 @@ function options.new_colorpicker( name, default_color )
     }
 
     function colorpicker:get_config( )
-        return ( '[ \'%s\' ] = { %i, %i, %i, %i }' ):format( self.name, self.color:unpack( ) )
+        return { self.color:unpack( ) }
     end
 
     function colorpicker:set_config( config_value )
@@ -1688,6 +1720,61 @@ function options.new_colorpicker( name, default_color )
     return colorpicker
 end
 
+function options.new_separator( identificator, render_color )
+    local separator = { }
+
+    separator.name = identificator
+    separator.id = gen_option_id( )
+
+    separator.render_color = render_color ~= nil and render_color or color( 255, 100 )
+
+    separator.size = vector( 0, 5 )
+    separator.side_pad = 5
+    separator.visible = true
+
+    function separator:get_config( )
+        return nil
+    end
+
+    function separator:set_config( )
+        
+    end
+
+    function separator:set_visible( new_vis_state )
+        self.visible = new_vis_state
+    end
+
+    function separator:get_width( )
+        return self.size.x
+    end
+
+    function separator:get_height( )
+        return separator.size.y
+    end
+
+    function separator:does_prevent_closing( )
+        return false
+    end
+
+    function separator:handle( pos, width )
+        return false
+    end
+
+    function separator:render( pos, width )
+        -- draw line
+        self.size.x = width - 2 * separator.side_pad
+        local sep_start = pos + vector( separator.side_pad, math.floor( separator.size.y / 2 ) )
+
+        renderer.line(
+            sep_start,
+            sep_start + vector( self.size.x, 0 ),
+            self.render_color
+        )
+    end
+
+    return separator
+end
+
 local menu_id_iterator = 0
 local function gen_menu_id( )
     menu_id_iterator = menu_id_iterator + 1
@@ -1715,25 +1802,30 @@ function options_menu.new( given_options )
             menu.width = new_width
         end
 
-        menu.options_dict[ option.name ] = option
+        if option.name then
+            menu.options_dict[ option.name ] = option
+        end
 
         menu.height = menu.height + option:get_height( )
     end
 
     menu.size = vector( menu.width, menu.height )
 
+
     function menu:get_option( opt_name )
         return self.options_dict[ opt_name ]
     end
 
     function menu:get_config( )
-        local config_str_tbl = { }
+        local config_tbl = { }
         for opt_idx = 1, #self.options do
-            local data = self.options[ opt_idx ]:get_config( )
-            table.insert( config_str_tbl, data )
+            local opt = self.options[ opt_idx ]
+            local data = opt:get_config( )
+            
+            config_tbl[ opt.name ] = data
         end
 
-        return config_str_tbl
+        return config_tbl
     end
 
     function menu:set_config( config_data )
@@ -2048,13 +2140,9 @@ function docker.text( text, given_options, callback )
             menu_config_tbl = { }
         end
 
-        table.insert( menu_config_tbl, ( '[ \'area_id\' ] = \'%s\'' ):format( self.parent and self.parent.id or nil ) )
+        menu_config_tbl[ 'area_id' ] = self.parent and self.parent.id or nil
 
-        local menu_config_str = '{ ' .. table.concat( menu_config_tbl, ', ' ) .. ' }'
-
-        local config_str = ( '[ \'%s\' ] = %s' ):format( self.text, menu_config_str )
-
-        return config_str
+        return menu_config_tbl
     end
 
     function text_obj:set_config( config_data_tbl )
@@ -2354,14 +2442,10 @@ function docker.slider( text, given_options, callback )
             menu_config_tbl = { }
         end
 
-        table.insert( menu_config_tbl, ( '[ \'area_id\' ] = \'%s\'' ):format( self.parent and self.parent.id or nil ) )
-        table.insert( menu_config_tbl, ( '[ \'thickness\' ] = %i' ):format( self.thickness ) )
+        menu_config_tbl[ 'area_id' ] = self.parent and self.parent.id or nil
+        menu_config_tbl[ 'thickness' ] = self.thickness
 
-        local menu_config_str = '{ ' .. table.concat( menu_config_tbl, ',' ) .. ' }'
-
-        local config_str = ( '[ \'%s\' ] = %s' ):format( self.text, menu_config_str )
-
-        return config_str
+        return menu_config_tbl
     end
 
     function slider_obj:get_option( name )
@@ -3175,21 +3259,34 @@ local selected_mat_data = {
     color_override = color( 255 ),
     backtrack_mod = false,
     backtrack_start = nil,
-    backtrack_end = nil
+    backtrack_end = nil,
+    fake_chams = nil,
+    fake_chams_color = color( '00436e' ),
+    fake_wireframe = false,
+    accurate_color = false
 }
 
 local cached_model = nil
 
 local model_options_menu = options_menu.new({ 
     options.new_combo( 'preview model', 'scout', 'soldier', 'pyro', 'demoman', 'heavy', 'engineer', 'medic', 'sniper', 'spy' ),
+    options.new_checkbox( 'XQC model', true ),
     options.new_combo( 'box style', 'none', 'rectangle', 'outline', 'corners' ),
-    options.new_checkbox( 'override material', false ),
-    options.new_checkbox( 'wireframe', false ),
+    options.new_checkbox( 'enable chams', false ),
     options.new_combo( 'chams', table.unpack( materials_list ) ),
     options.new_colorpicker( 'chams color', color( '00436e' ) ),
+    options.new_checkbox( 'wireframe', false ),
+    options.new_separator( 'chams and backtrack separator', color( 255, 50 ) ),
     options.new_checkbox( 'backtrack modulation', false ),
     options.new_colorpicker( 'backtrack start', color( '00436e' ) ),
     options.new_colorpicker( 'backtrack end', color( '6d1537' ) ),
+    options.new_separator( '2' ),
+    options.new_checkbox( 'enable fake aa material', false ),
+    options.new_combo( 'fake chams', table.unpack( materials_list ) ),
+    options.new_colorpicker( 'fake chams color', color( '00436e' ) ),
+    options.new_checkbox( 'fake wireframe', false ),
+    options.new_separator( '3' ),
+    options.new_checkbox( 'force supress engine lighting', false )
 })
 
 local model_opt_name_to_modelname = { -- i could do 'models/player/%s.mdl':format aswell but demoman is very important in the model options
@@ -3204,10 +3301,33 @@ local model_opt_name_to_modelname = { -- i could do 'models/player/%s.mdl':forma
     [ 'spy' ] = 'models/player/spy.mdl'
 }
 
-local function model_options_callback( )
-    local self = model_options_menu
+local model_options = { elements = {
+    model_opt = model_options_menu:get_option( 'preview model' ),
 
-    local model_opt = self:get_option( 'preview model' )
+    model_xqc_opt = model_options_menu:get_option( 'XQC model' ),
+    box_style_opt = model_options_menu:get_option( 'box style' ),
+
+    override_mat_opt = model_options_menu:get_option( 'enable chams' ),
+    material_opt = model_options_menu:get_option( 'chams' ),
+    chams_color_opt = model_options_menu:get_option( 'chams color' ),
+    wireframe_opt = model_options_menu:get_option( 'wireframe' ),
+
+    backtrack_mod_opt = model_options_menu:get_option( 'backtrack modulation' ),
+    backtrack_start_opt = model_options_menu:get_option( 'backtrack start' ),
+    backtrack_end_opt = model_options_menu:get_option( 'backtrack end' ),
+
+    fake_aa_override_opt = model_options_menu:get_option( 'enable fake aa material' ),
+    fake_material_opt = model_options_menu:get_option( 'fake chams' ),
+    fake_color_opt = model_options_menu:get_option( 'fake chams color' ),
+    fake_wireframe_opt = model_options_menu:get_option( 'fake wireframe' ),
+
+    supress_engine_light = model_options_menu:get_option( 'force supress engine lighting' ),
+
+    separator_chams_backtrack = model_options_menu:get_option( 'chams and backtrack separator' )
+} }
+
+function model_options.handle_preview_character( )
+    local model_opt = model_options.elements.model_opt
 
     local _, model_name = model_opt:get( )
     if myEnt then
@@ -3224,32 +3344,48 @@ local function model_options_callback( )
             end
         end
     end
+end
 
-    local box_style_opt = self:get_option( 'box style' )
+function model_options.handle_fake_chams( )
+    local fake_aa_override_opt = model_options.elements.fake_aa_override_opt
+    local fake_material_opt = model_options.elements.fake_material_opt
+    local fake_color_opt = model_options.elements.fake_color_opt
+    local fake_wireframe_opt = model_options.elements.fake_wireframe_opt
 
-    local override_mat_opt = self:get_option( 'override material' )
+    local override_fake_chams = fake_aa_override_opt:get( )
+    if override_fake_chams then
+        local _, fake_material = fake_material_opt:get( )
+        local fake_color = fake_color_opt:get( )
+        local fake_wireframe = fake_wireframe_opt:get( )
 
-    local wireframe_opt = self:get_option( 'wireframe' )
-    local material_opt = self:get_option( 'chams' )
-    local chams_color_opt = self:get_option( 'chams color' )
-    
-    local backtrack_mod_opt = self:get_option( 'backtrack modulation' )
-    local backtrack_start_opt = self:get_option( 'backtrack start' )
-    local backtrack_end_opt = self:get_option( 'backtrack end' )
+        selected_mat_data.fake_chams = fake_material
+        selected_mat_data.fake_chams_color = fake_color
+        selected_mat_data.fake_wireframe = fake_wireframe
 
-    local should_override_mat = override_mat_opt:get( )
-    local override_backtrack = backtrack_mod_opt:get( )
+    else
+        selected_mat_data.fake_chams = nil
+    end
 
-    wireframe_opt:set_visible( should_override_mat )
-    material_opt:set_visible( should_override_mat )
-    chams_color_opt:set_visible( should_override_mat )
-    backtrack_mod_opt:set_visible( should_override_mat )
+    -- force gui value
+    gui.SetValue( 'anti aim indicator', override_fake_chams and 1 or 0 )
+    gui.SetValue( 'anti aim indicator color', '300' )
+end
 
-    backtrack_start_opt:set_visible( should_override_mat and override_backtrack )
-    backtrack_end_opt:set_visible( should_override_mat and override_backtrack )
+function model_options.handle_box_esp( )
+    local box_style_opt = model_options.elements.box_style_opt
 
     local _, box_style = box_style_opt:get( )
     esp.box = box_style
+end
+
+function model_options.handle_player_chams( )
+    local override_mat_opt = model_options.elements.override_mat_opt
+
+    local wireframe_opt = model_options.elements.wireframe_opt
+    local material_opt = model_options.elements.material_opt
+    local chams_color_opt = model_options.elements.chams_color_opt
+
+    local should_override_mat = override_mat_opt:get( )
 
     if should_override_mat then
         local _, name = material_opt:get( )
@@ -3257,18 +3393,88 @@ local function model_options_callback( )
         selected_mat_data.color_override = chams_color_opt:get( )
         selected_mat_data.wireframe = wireframe_opt:get( )
 
-        if override_backtrack then
-            selected_mat_data.backtrack_mod = true
-            selected_mat_data.backtrack_start = backtrack_start_opt:get( )
-            selected_mat_data.backtrack_end = backtrack_end_opt:get( )
-        end
     else
         selected_mat_data.material = nil
     end
+end
 
-    if not override_backtrack then
-        selected_mat_data.backtrack_mod = false
+function model_options.handle_backtrack_chams( )
+    local backtrack_mod_opt = model_options.elements.backtrack_mod_opt
+    local backtrack_start_opt = model_options.elements.backtrack_start_opt
+    local backtrack_end_opt = model_options.elements.backtrack_end_opt
+
+    local override_backtrack = backtrack_mod_opt:get( )
+    selected_mat_data.backtrack_mod = override_backtrack
+
+    if override_backtrack then
+        selected_mat_data.backtrack_start = backtrack_start_opt:get( )
+        selected_mat_data.backtrack_end = backtrack_end_opt:get( )
     end
+end
+
+function model_options.handle_visibility( )
+    -- global enable items
+    local override_mat_opt = model_options.elements.override_mat_opt
+    local backtrack_mod_opt = model_options.elements.backtrack_mod_opt
+    local override_fake_chams_opt = model_options.elements.fake_aa_override_opt
+
+    -- items
+    local wireframe_opt = model_options.elements.wireframe_opt
+    local material_opt = model_options.elements.material_opt
+    local chams_color_opt = model_options.elements.chams_color_opt
+    local backtrack_start_opt = model_options.elements.backtrack_start_opt
+    local backtrack_end_opt = model_options.elements.backtrack_end_opt
+    local fake_material_opt = model_options.elements.fake_material_opt
+    local fake_color_opt = model_options.elements.fake_color_opt
+    local fake_wireframe_opt = model_options.elements.fake_wireframe_opt
+
+    -- separators
+    local separator_chams_backtrack = model_options.elements.separator_chams_backtrack
+
+    -- global enables
+    local should_override_mat = override_mat_opt:get( )
+    local should_override_backtrack = backtrack_mod_opt:get( )
+    local should_override_fake_chams = override_fake_chams_opt:get( )
+
+    -- setvisible
+    -- model chams
+    wireframe_opt:set_visible( should_override_mat )
+    material_opt:set_visible( should_override_mat )
+    chams_color_opt:set_visible( should_override_mat )
+    separator_chams_backtrack:set_visible( should_override_mat )
+
+    -- backtrack stuff
+    backtrack_mod_opt:set_visible( should_override_mat )
+    backtrack_start_opt:set_visible( should_override_mat and should_override_backtrack )
+    backtrack_end_opt:set_visible( should_override_mat and should_override_backtrack )
+
+    -- fake chams visibility
+    fake_material_opt:set_visible( should_override_fake_chams )
+    fake_color_opt:set_visible( should_override_fake_chams )
+    fake_wireframe_opt:set_visible( should_override_fake_chams )
+end
+
+local function model_options_callback( )
+    local self = model_options_menu
+
+    model_options.handle_preview_character( )
+
+    model_options.handle_fake_chams( )
+
+    -- disable default esp by forcing the menu stuff
+    gui.SetValue( 'players', 0 ) -- disable lmaobox's esp
+    gui.SetValue( 'colored players', 0 ) -- disable lmaobox's chams
+
+    local enable_xqc = model_options.elements.model_xqc_opt:get( )
+    gui.SetValue( 'classic wallhack', enable_xqc and 1 or 0 )
+
+    model_options.handle_box_esp( )
+    model_options.handle_player_chams( )
+    model_options.handle_backtrack_chams( )
+
+    selected_mat_data.accurate_color = model_options.elements.supress_engine_light:get( )
+
+    model_options.handle_visibility( )
 end
 
 local function handle_model_menu( )
@@ -3667,9 +3873,6 @@ local function render_enemy_esp( )
     local enemies = { }
 
     for _, ent in ipairs( players ) do
-
-        get_2d_box_bounds( ent )
-
         if ent:IsAlive( ) and ent:GetTeamNumber( ) ~= lp:GetTeamNumber( ) then
             table.insert( enemies, ent )
         end
@@ -4034,60 +4237,94 @@ end
 
 local function onDrawModel( drawModelContext )
     local lp = entities.GetLocalPlayer( )
-    local mat = selected_mat_data.material
 
-    if not myEnt or not mat then return end
+    local player_chams_material_name = selected_mat_data.material
+    local fake_chams_mat_name = selected_mat_data.fake_chams
 
     local ctx_ent = drawModelContext:GetEntity( )
 
-    local overriden_color = nil
+    local doing_fake_chams = false
+    local backtrack_override_color = nil
     if ctx_ent and lp then
         -- were doing actual players
         local is_player = ctx_ent:IsPlayer( )
 
         if not is_player then return end
 
-        if ctx_ent:GetTeamNumber( ) == lp:GetTeamNumber( ) then return end
+        local plr_idx = ctx_ent:GetIndex( )
 
-        local index = tostring( ctx_ent:GetIndex( ) )
+        if ctx_ent:GetTeamNumber( ) == lp:GetTeamNumber( ) then
+            if plr_idx == lp:GetIndex( ) then
+                local index = tostring( plr_idx )
 
-        if selected_mat_data.backtrack_mod then
-            if not drawn_entities[ index ] then
-                drawn_entities[ index ] = 1
-            else
-                drawn_entities[ index ] = drawn_entities[ index ] + 1
+                if not drawn_entities[ index ] then
+                    drawn_entities[ index ] = 1
+                    return
+                else
+                    doing_fake_chams = true
+                end
             end
+        else
+            local index = tostring( plr_idx )
 
-            if drawn_entities[ index ] > 1 then
-                overriden_color = dist_to_color( drawn_entities[ index ], selected_mat_data.backtrack_start, selected_mat_data.backtrack_end )
+            if selected_mat_data.backtrack_mod then
+                if not drawn_entities[ index ] then
+                    drawn_entities[ index ] = 1
+                else
+                    drawn_entities[ index ] = drawn_entities[ index ] + 1
+                end
+
+                if drawn_entities[ index ] > 1 then
+                    backtrack_override_color = dist_to_color( drawn_entities[ index ], selected_mat_data.backtrack_start, selected_mat_data.backtrack_end )
+                end
             end
         end
     else
+        -- esp preview ent
         if drawModelContext:GetModelName( ) ~= cached_model then return end
     end
 
-    local r, g, b, a = selected_mat_data.color_override:unpack( )
+    local mat_name = nil
+    local material = nil
+    local wireframe = false
+    local chams_color = nil
 
+    if not doing_fake_chams and player_chams_material_name then
+        local selected_color = selected_mat_data.color_override
 
-    if overriden_color then
-        r, g, b, a = overriden_color:unpack( )
+        if backtrack_override_color then
+            selected_color = backtrack_override_color
+        end
+
+        chams_color = selected_color
+        mat_name = player_chams_material_name
+        material = materials_key_to_mat[ player_chams_material_name ]
+        wireframe = selected_mat_data.wireframe
+    elseif doing_fake_chams and fake_chams_mat_name then
+        chams_color = selected_mat_data.fake_chams_color
+        mat_name = fake_chams_mat_name
+        material = materials_key_to_mat[ fake_chams_mat_name ]
+        wireframe = selected_mat_data.fake_wireframe
     end
 
-    local material = materials_key_to_mat[ mat ]
+    -- we only need to check one but vscode keeps YELLING at me
+    if mat_name and material ~= nil and chams_color then
+        local r, g, b, a = chams_color:unpack( )
 
-    if mat == 'flat' or mat == 'glow' then
-        material:SetShaderParam( '$color', Vector3( r / 255, g / 255, b / 255 ) )
-        material:SetShaderParam( '$color2', Vector3( r / 255, g / 255, b / 255 ) )
-    else
-        material:SetShaderParam( '$envmaptint', Vector3( r / 255, g / 255, b / 255 ) )
-    end
+        if mat_name == 'flat' or mat_name == 'glow' then
+            material:SetShaderParam( '$color', Vector3( r / 255, g / 255, b / 255 ) )
+            material:SetShaderParam( '$color2', Vector3( r / 255, g / 255, b / 255 ) )
+        elseif mat_name == 'metallic' then
+            material:SetShaderParam( '$envmaptint', Vector3( r / 255, g / 255, b / 255 ) )
+        end
 
-    material:SetMaterialVarFlag( 268435456, selected_mat_data.wireframe )
+        material:SetMaterialVarFlag( 268435456, wireframe )
 
-    drawModelContext:ForcedMaterialOverride( material )
+        drawModelContext:ForcedMaterialOverride( material )
 
-    if selected_mat_data.accurate_color then
-        drawModelContext:SuppressEngineLighting( )
+        if selected_mat_data.accurate_color then
+            drawModelContext:SuppressEngineLighting( )
+        end
     end
 end
 
@@ -4163,32 +4400,6 @@ callbacks.Register("Draw", function( )
         myEnt = nil
     end
 
-    -- local lp = entities.GetLocalPlayer( )
-    -- if lp then
-    --     local tbl = lp:EntitySpaceHitboxSurroundingBox( )
-
-    --     local mins, maxs = tbl[ 1 ], tbl[ 2 ]
-
-    --     mins = lp:GetAbsOrigin( ) + mins
-
-    --     local all_corners = {
-    --         mins,
-    --         mins + Vector3( maxs.x, 0, 0 ),
-    --         mins + Vector3( maxs.x, maxs.y, 0 ),
-    --         mins + Vector3( 0, maxs.y, 0 ),
-    --         mins + Vector3( 0, maxs.y, maxs.z ),
-    --         mins + maxs,
-    --         mins + Vector3( maxs.x, 0, maxs.z ),
-    --         mins + Vector3( 0, 0, maxs.z ),
-    --     }
-
-    --     for i = 1, #all_corners do
-    --         for j = i + 1, #all_corners do
-    --             renderer.line3d( all_corners[ i ], all_corners[ j ], color( 255 ) )
-    --         end
-    --     end
-    -- end
-
     local scr_w, scr_h = draw.GetScreenSize( )
     camW = math.floor( camH / scr_w * scr_h )
 
@@ -4208,6 +4419,8 @@ callbacks.Register("Draw", function( )
             open_menu = nil     
         end
     end
+
+    render_enemy_esp( )
 
     if menu_opened then
         draw_background( )
@@ -4230,28 +4443,14 @@ callbacks.Register("Draw", function( )
         handle_model_menu( )
     end
 
-    render_enemy_esp( )
+    if dragging_id == nil and open_menu == nil and not dragging_camera then
+        handle_model_spin( )
+    end
 
     -- handle open menu
     if open_menu and open_menu_pos then
         open_menu:render( open_menu_pos )
     end
-
-    if not myEnt or not our_view or not menu_opened then return end
-
-    if dragging_id == nil and open_menu == nil and not dragging_camera then
-        handle_model_spin( )
-    end
-
-    -- local cam_pos = client.WorldToScreen( customView.origin )
-
-    -- if cam_pos and cam_pos[ 1 ] and cam_pos[ 2 ] then
-    --     renderer.circle_filled(
-    --         vector( cam_pos[ 1 ], cam_pos[ 2 ] ),
-    --         4,
-    --         color( 255, 0, 0 )
-    --     )
-    -- end
 end)
 
 local function load_config( )
@@ -4265,7 +4464,7 @@ local function load_config( )
 
             text_obj:set_config( text_config_data )
 
-            if text_config_data[ 'area_id' ] ~= 'nil' then
+            if text_config_data[ 'area_id' ] ~= nil then
                 item_bank_text:remove( text_obj )
             end
         end
@@ -4279,7 +4478,7 @@ local function load_config( )
 
             slider_obj:set_config( slider_config_data )
 
-            if slider_config_data[ 'area_id' ] ~= 'nil' then
+            if slider_config_data[ 'area_id' ] ~= nil then
                 item_bank_bars:remove( slider_obj )
             end
         end
@@ -4295,30 +4494,31 @@ end
 load_config( )
 
 local function save_config( )
-    local configs_texts = { }
+    local esp_config = { }
     for i = 1, #docker_texts do
-        table.insert( configs_texts, docker_texts[ i ]:get_config( ) )
+        local text_obj = docker_texts[ i ]
+        esp_config[ text_obj.text ] = text_obj:get_config( )
     end
 
-    local configs_sliders = { }
     for i = 1, #docker_sliders do
-        table.insert( configs_sliders, docker_sliders[ i ]:get_config( ) )
+        local slider_obj = docker_sliders[ i ]
+        esp_config[ slider_obj.text ] = slider_obj:get_config( )
     end
-
-    local slider_configs = table.concat( configs_sliders, ', ' )
 
     local model_setts_tbl = model_options_menu:get_config( )
-    local model_setts = ( '[ \'model_options_menu\' ] = { %s }' ):format( table.concat( model_setts_tbl, ', ' ) )
+    esp_config[ 'model_options_menu' ] = model_setts_tbl
 
-    table.insert( configs_texts, model_setts )
-    table.insert( configs_texts, slider_configs )
+    local json_str = dkjson.encode( esp_config )
 
-    local config = table.concat( configs_texts, ', ' )
+    local cfg_file_obj = io.open( config_file_path, 'w' )
+    io.output( cfg_file_obj )
 
-    local minus_line = string.rep( '-', 25 )
+    io.write( json_str )
+
+    io.close( cfg_file_obj )
 
     print(
-        ( 'Please put the following text as the first line of the script to save your config.\n%s\n\nlocal config_table = { %s }\n\n%s' ):format( minus_line, config, minus_line )
+        ( '[esp builder] Config has been saved. Config path:\n%s' ):format( config_file_path )
     )
 end
 
