@@ -1,3 +1,5 @@
+local custom_textures = require( "custom_textures" )
+
 local bg_texture = custom_textures.create(
     {
         0, 1, 0, 1,
